@@ -316,7 +316,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1b256d3ZxcXdiZ2NlZGlkeWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTk0MDIsImV4cCI6MjA5NTgzNTQwMn0.0xbSS5-Mr3O6bRfAjxuK9UPttvWeXcigjmuKRJZ0ctY';
 
-const EMPLOYEES = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Wellenson', 'Joao Batista', 'Marciano','Tami Pacheco'];
+const EMPLOYEES = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Wellenson', 'Joao Batista', 'Marciano', 'Tami Pacheco'];
 
 let selectedEmp = null;
 let employeeStatus = {};
@@ -489,7 +489,18 @@ async function doPunch() {
   }
 }
 
+const ADMIN_PASSWORD = 'Vicafhydro2026!';
+let adminUnlocked = false;
+
 function switchTab(tab) {
+  if (tab === 'admin' && !adminUnlocked) {
+    const pwd = prompt('Digite a senha do administrador:');
+    if (pwd !== ADMIN_PASSWORD) {
+      toast('Senha incorreta', 'error');
+      return;
+    }
+    adminUnlocked = true;
+  }
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', (i===0 && tab==='punch') || (i===1 && tab==='admin'));
   });
