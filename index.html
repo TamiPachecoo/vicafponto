@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -208,21 +209,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
 .loading { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
-
-/* RATE INPUT */
-.rate-wrap {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px;
-}
-.rate-title { font-size: 12px; color: var(--text2); margin-bottom: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; }
-.rate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.rate-item { display: flex; flex-direction: column; gap: 5px; }
-.rate-item label { font-size: 11px; color: var(--text3); }
-.rate-item input {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 13px;
-  color: var(--text); font-family: 'DM Mono', monospace; width: 100%;
-}
 </style>
 </head>
 <body>
@@ -255,7 +241,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
     <div class="section-label">Quem está batendo o ponto?</div>
     <div class="emp-grid" id="empGrid">
-      <!-- filled by JS -->
+      <div class="loading">Carregando funcionários...</div>
     </div>
 
     <div class="status-card" id="statusCard" style="display:none">
@@ -297,11 +283,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
       <button onclick="loadSummary()">Ver</button>
     </div>
 
-    <div class="rate-wrap">
-      <div class="rate-title">Valor/hora por funcionário (R$)</div>
-      <div class="rate-grid" id="rateGrid"></div>
-    </div>
-
     <div id="summaryArea">
       <div class="empty-state">Selecione um período e clique em Ver</div>
     </div>
@@ -316,13 +297,10 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1b256d3ZxcXdiZ2NlZGlkeWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTk0MDIsImV4cCI6MjA5NTgzNTQwMn0.0xbSS5-Mr3O6bRfAjxuK9UPttvWeXcigjmuKRJZ0ctY';
 
-const EMPLOYEES = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Wellenson', 'Joao Batista', 'Marciano', 'Tami Pacheco'];
-
+let EMPLOYEES = [];
 let selectedEmp = null;
 let employeeStatus = {};
 let hourlyRates = {};
-
-EMPLOYEES.forEach(e => { hourlyRates[e] = 0; });
 
 async function api(method, path, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
@@ -360,8 +338,35 @@ function initials(name) {
   return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
 }
 
+// ── LOAD EMPLOYEES FROM SUPABASE ──
+async function loadEmployees() {
+  try {
+    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
+    EMPLOYEES = rows.map(r => r.full_name);
+    rows.forEach(r => {
+      hourlyRates[r.full_name] = {
+        regular:            r.regular_hourly_rate       || 0,
+        overtime:           r.overtime_rate             || 0,
+        weekend:            r.weekend_rate              || 0,
+        saturday:           r.saturday_rate             || 0,
+        sunday:             r.sunday_rate               || 0,
+        holiday:            r.holiday_rate              || 0,
+        overtimeThreshold:  r.overtime_threshold_hours  || 8,
+        saturdayThreshold:  r.saturday_threshold_hours  || 4
+      };
+    });
+  } catch(e) {
+    console.error('Erro ao carregar funcionários:', e);
+    toast('Erro ao carregar funcionários', 'error');
+  }
+}
+
 function buildEmpGrid() {
   const grid = document.getElementById('empGrid');
+  if (!EMPLOYEES.length) {
+    grid.innerHTML = '<div class="empty-state">Nenhum funcionário encontrado</div>';
+    return;
+  }
   grid.innerHTML = EMPLOYEES.map(emp => `
     <button class="emp-btn" onclick="selectEmp('${emp}')" id="emp-${emp}">
       <div class="emp-avatar">${initials(emp)}</div>
@@ -386,8 +391,13 @@ async function loadTodayStatus() {
       const statusEl = document.getElementById('empStatus-' + emp);
       if (statusEl) {
         if (!last) { statusEl.textContent = 'Sem registro'; }
-        else if (last.type === 'clock_in') { statusEl.textContent = '● Trabalhando'; statusEl.style.color = '#22c55e'; }
-        else { statusEl.textContent = '○ Fora'; statusEl.style.color = '#94a3b8'; }
+        else if (last.type === 'clock_in') {
+          statusEl.textContent = '● Trabalhando';
+          statusEl.style.color = '#22c55e';
+        } else {
+          statusEl.textContent = '○ Fora';
+          statusEl.style.color = '#94a3b8';
+        }
       }
     });
   } catch(e) { console.error(e); }
@@ -398,7 +408,10 @@ async function loadTodayLog() {
   const logEl = document.getElementById('todayLog');
   try {
     const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp`);
-    if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
+    if (!rows.length) {
+      logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>';
+      return;
+    }
     logEl.innerHTML = '<div class="log-list">' + rows.map(r => {
       const t = new Date(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
@@ -428,9 +441,7 @@ function selectEmp(name) {
 
 async function updatePunchBtn() {
   if (!selectedEmp) return;
-  const status = employeeStatus[selectedEmp];
   const btn = document.getElementById('punchBtn');
-  const label = document.getElementById('punchLabel');
   const hint = document.getElementById('punchHint');
   const badge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
@@ -455,11 +466,9 @@ async function updatePunchBtn() {
       hint.textContent = 'Toque para registrar saída';
     }
 
-    if (last) {
-      lastPunch.textContent = new Date(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    } else {
-      lastPunch.textContent = '—';
-    }
+    lastPunch.textContent = last
+      ? new Date(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+      : '—';
   } catch(e) { console.error(e); }
 }
 
@@ -506,17 +515,6 @@ function switchTab(tab) {
   });
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + tab).classList.add('active');
-  if (tab === 'admin') buildRateGrid();
-}
-
-function buildRateGrid() {
-  document.getElementById('rateGrid').innerHTML = EMPLOYEES.map(emp => `
-    <div class="rate-item">
-      <label>${emp}</label>
-      <input type="number" value="${hourlyRates[emp]}" min="0" step="1"
-        onchange="hourlyRates['${emp}'] = parseFloat(this.value)||0" />
-    </div>
-  `).join('');
 }
 
 function setDefaultDates() {
@@ -533,10 +531,13 @@ async function loadSummary() {
   const area = document.getElementById('summaryArea');
   area.innerHTML = '<div class="loading">Calculando...</div>';
   try {
-    const rows = await api('GET', `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=employee,type,timestamp,date`);
-    if (!rows.length) { area.innerHTML = '<div class="empty-state">Nenhum registro no período</div>'; return; }
+    const rows = await api('GET', `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=employee,type,timestamp,date,tipo_dia`);
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty-state">Nenhum registro no período</div>';
+      return;
+    }
 
-    // group by employee then by date
+    // Group by employee then by date
     const byEmp = {};
     rows.forEach(r => {
       if (!byEmp[r.employee]) byEmp[r.employee] = {};
@@ -545,11 +546,14 @@ async function loadSummary() {
     });
 
     let html = '';
-    const totalByEmp = {};
+    const payByEmp = {};
 
     Object.keys(byEmp).sort().forEach(emp => {
-      let empTotal = 0;
+      let empTotalMins = 0;
+      let empPayTotal = 0;
       let detailRows = '';
+      const rates = hourlyRates[emp] || {};
+
       Object.keys(byEmp[emp]).sort().forEach(date => {
         const punches = byEmp[emp][date];
         let mins = 0;
@@ -559,33 +563,59 @@ async function loadSummary() {
             i++;
           }
         }
-        empTotal += mins;
+
+        const hrs = mins / 60;
+        const tipoDia = punches[0].tipo_dia || 'regular';
+        const threshold = rates.overtimeThreshold || 8;
+        const satThreshold = rates.saturdayThreshold || 4;
+        let pay = 0;
+
+        if (tipoDia === 'feriado' || tipoDia === 'domingo') {
+          pay = hrs * (rates.holiday || rates.sunday || rates.regular || 0);
+        } else if (tipoDia === 'sabado') {
+          const baseHrs = Math.min(hrs, satThreshold);
+          const extraHrs = Math.max(0, hrs - satThreshold);
+          pay = (baseHrs * (rates.saturday || rates.regular || 0)) + (extraHrs * (rates.holiday || rates.overtime || 0));
+        } else {
+          const baseHrs = Math.min(hrs, threshold);
+          const extraHrs = Math.max(0, hrs - threshold);
+          pay = (baseHrs * (rates.regular || 0)) + (extraHrs * (rates.overtime || 0));
+        }
+
+        empTotalMins += mins;
+        empPayTotal += pay;
+
         const h = Math.floor(mins/60), m2 = Math.round(mins%60);
         const ds = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+        const tipoBadge = tipoDia === 'feriado' ? '🔴' : tipoDia === 'sabado' ? '🟡' : tipoDia === 'domingo' ? '🟠' : '🟢';
         detailRows += `<div class="summary-row">
-          <div><div class="sum-emp" style="font-size:13px;font-weight:400">${ds}</div></div>
-          <div class="sum-hours" style="font-size:13px">${h}h${String(m2).padStart(2,'0')}m</div>
+          <div><div class="sum-emp" style="font-size:13px;font-weight:400">${tipoBadge} ${ds}</div></div>
+          <div style="text-align:right">
+            <div class="sum-hours" style="font-size:13px">${h}h${String(m2).padStart(2,'0')}m</div>
+            <div style="font-size:11px;color:var(--text3)">R$ ${pay.toFixed(2)}</div>
+          </div>
         </div>`;
       });
-      totalByEmp[emp] = empTotal;
-      const th = Math.floor(empTotal/60), tm = Math.round(empTotal%60);
+
+      payByEmp[emp] = empPayTotal;
+      const th = Math.floor(empTotalMins/60), tm = Math.round(empTotalMins%60);
       html += `<div class="summary-card" style="margin-bottom:16px">
         <div class="summary-header" style="display:flex;justify-content:space-between;align-items:center">
           <span>${emp}</span>
-          <span style="color:var(--accent)">${th}h${String(tm).padStart(2,'0')}m total</span>
+          <span style="color:var(--accent)">${th}h${String(tm).padStart(2,'0')}m</span>
         </div>
         ${detailRows}
       </div>`;
     });
 
     // Pay summary
+    let payTotal = 0;
     let payRows = '';
-    Object.keys(totalByEmp).sort().forEach(emp => {
-      const hrs = totalByEmp[emp] / 60;
-      const pay = hrs * (hourlyRates[emp] || 0);
+    Object.keys(payByEmp).sort().forEach(emp => {
+      payTotal += payByEmp[emp];
       payRows += `<div class="pay-row">
         <div class="pay-name">${emp}</div>
-        <div class="pay-val">R$ ${pay.toFixed(2)}</div>
+        <div class="pay-val">R$ ${payByEmp[emp].toFixed(2)}</div>
       </div>`;
     });
 
@@ -594,9 +624,7 @@ async function loadSummary() {
       ${payRows}
       <div class="pay-row">
         <div class="pay-name" style="font-weight:600;color:#fff">Total</div>
-        <div class="pay-val">R$ ${Object.keys(totalByEmp).reduce((s,e)=>{
-          return s + (totalByEmp[e]/60)*(hourlyRates[e]||0);
-        },0).toFixed(2)}</div>
+        <div class="pay-val">R$ ${payTotal.toFixed(2)}</div>
       </div>
     </div>`;
 
@@ -608,6 +636,7 @@ async function loadSummary() {
 }
 
 async function init() {
+  await loadEmployees();
   buildEmpGrid();
   setDefaultDates();
   await loadTodayStatus();
