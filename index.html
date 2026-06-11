@@ -505,6 +505,12 @@ async function api(method, path, body) {
 
 // ── CLOCK ──
 
+function parseSafeDate(ts) {
+  // Normalize Supabase timestamp format to ISO 8601
+  if (!ts) return null;
+  return new Date(ts.replace(' ', 'T').replace('+00', 'Z'));
+}
+
 function getLocalDate() {
   return new Date().toLocaleDateString('pt-BR', {year:'numeric',month:'2-digit',day:'2-digit'})
     .split('/').reverse().join('-');
@@ -614,7 +620,7 @@ async function loadTodayLog() {
     rows.forEach(r => { if (r.notes && !notesByEmp[r.employee]) notesByEmp[r.employee] = r.notes; });
 
     logEl.innerHTML = '<div class="log-list">' + rows.map(r => {
-      const t = new Date(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const t = parseSafeDate(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
       const corrBadge = r.is_corrected ? '<span class="log-corrected-badge">corrigido</span>' : '';
       const noteHtml = r.notes ? `<div class="log-note">📝 ${r.notes}</div>` : '';
@@ -687,7 +693,7 @@ async function updatePunchBtn() {
       statusText.textContent = 'Trabalhando';
       hint.textContent = 'Toque para registrar saída';
     }
-    lastPunch.textContent = last ? new Date(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    lastPunch.textContent = last ? parseSafeDate(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
   } catch(e) { console.error(e); }
 }
 
@@ -1025,7 +1031,7 @@ async function loadSummary() {
         let mins = 0;
         for (let i = 0; i < punches.length - 1; i++) {
           if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-            mins += (new Date(punches[i+1].timestamp) - new Date(punches[i].timestamp)) / 60000;
+            mins += (parseSafeDate(punches[i+1].timestamp) - parseSafeDate(punches[i].timestamp)) / 60000;
             i++;
           }
         }
@@ -1135,9 +1141,9 @@ function buildReportRows(byEmp, payByEmp) {
       let corrected = false;
       for (let i = 0; i < punches.length - 1; i++) {
         if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-          inT = new Date(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-          outT = new Date(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-          mins += (new Date(punches[i+1].timestamp) - new Date(punches[i].timestamp)) / 60000;
+          inT = parseSafeDate(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+          outT = parseSafeDate(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+          mins += (parseSafeDate(punches[i+1].timestamp) - parseSafeDate(punches[i].timestamp)) / 60000;
           if (punches[i].is_corrected || punches[i+1].is_corrected) corrected = true;
           i++;
         }
@@ -1193,7 +1199,7 @@ function exportExcel() {
         let mins = 0;
         for (let i = 0; i < punches.length - 1; i++) {
           if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-            mins += (new Date(punches[i+1].timestamp) - new Date(punches[i].timestamp)) / 60000;
+            mins += (parseSafeDate(punches[i+1].timestamp) - parseSafeDate(punches[i].timestamp)) / 60000;
             i++;
           }
         }
