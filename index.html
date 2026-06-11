@@ -504,6 +504,12 @@ async function api(method, path, body) {
 }
 
 // ── CLOCK ──
+
+function getLocalDate() {
+  return new Date().toLocaleDateString('pt-BR', {year:'numeric',month:'2-digit',day:'2-digit'})
+    .split('/').reverse().join('-');
+}
+
 function clock() {
   const now = new Date();
   document.getElementById('clockTime').textContent =
@@ -574,7 +580,7 @@ function buildEmpGrid() {
 
 // ── TODAY STATUS ──
 async function loadTodayStatus() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   try {
     const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.asc&select=employee,type,timestamp`);
     employeeStatus = {};
@@ -595,7 +601,7 @@ async function loadTodayStatus() {
 
 // ── TODAY LOG ──
 async function loadTodayLog() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   const logEl = document.getElementById('todayLog');
   try {
     const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`);
@@ -645,7 +651,7 @@ function selectEmp(name) {
 }
 
 async function loadTodayNote(emp) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   try {
     const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(emp)}&not.notes.is.null&limit=1&select=notes`);
     if (rows.length && rows[0].notes) {
@@ -664,7 +670,7 @@ async function updatePunchBtn() {
   const badge = document.getElementById('statusBadge');
   const statusText = document.getElementById('statusText');
   const lastPunch = document.getElementById('lastPunch');
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   try {
     const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&order=timestamp.desc&limit=1&select=type,timestamp`);
     const last = rows[0];
@@ -690,7 +696,7 @@ async function doPunch() {
   if (!selectedEmp) return;
   const btn = document.getElementById('punchBtn');
   if (btn.classList.contains('disabled')) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&order=timestamp.desc&limit=1&select=type`);
   const last = rows[0];
   const type = (!last || last.type === 'clock_out') ? 'clock_in' : 'clock_out';
@@ -720,7 +726,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 
 function openCorrectionModal() {
   if (!selectedEmp) { toast('Selecione seu nome primeiro', 'error'); return; }
-  document.getElementById('corrDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('corrDate').value = getLocalDate();
   document.getElementById('corrTime').value = '';
   document.getElementById('corrNote').value = '';
   openModal('correctionModal');
@@ -728,7 +734,7 @@ function openCorrectionModal() {
 
 function openMedicalModal() {
   if (!selectedEmp) { toast('Selecione seu nome primeiro', 'error'); return; }
-  document.getElementById('medDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('medDate').value = getLocalDate();
   document.getElementById('medNote').value = '';
   openModal('medicalModal');
 }
