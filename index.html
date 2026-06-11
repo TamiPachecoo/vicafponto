@@ -506,9 +506,8 @@ async function api(method, path, body) {
 // ── CLOCK ──
 
 function parseSafeDate(ts) {
-  // Normalize Supabase timestamp format to ISO 8601
   if (!ts) return null;
-  return new Date(ts.replace(' ', 'T').replace('+00', 'Z'));
+  return new Date(String(ts).replace(' ', 'T').replace('+00', 'Z'));
 }
 
 function getLocalDate() {
@@ -994,6 +993,12 @@ async function loadSummary() {
       if (!byEmp[r.employee].punches[r.date]) byEmp[r.employee].punches[r.date] = [];
       byEmp[r.employee].punches[r.date].push(r);
       if (r.notes && !byEmp[r.employee].notes[r.date]) byEmp[r.employee].notes[r.date] = r.notes;
+    });
+    // Sort punches within each day by timestamp to ensure correct pairing
+    Object.keys(byEmp).forEach(emp => {
+      Object.keys(byEmp[emp].punches).forEach(date => {
+        byEmp[emp].punches[date].sort((a, b) => parseSafeDate(a.timestamp) - parseSafeDate(b.timestamp));
+      });
     });
 
     // Add medical leave to emp data
