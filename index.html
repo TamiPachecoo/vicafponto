@@ -273,8 +273,12 @@ async function api(method, path, body) {
 // THE ONLY FIX: safe timestamp parser for Supabase format
 function parseTS(ts) {
   if (!ts) return new Date(NaN);
-  // Supabase returns "2026-06-04 10:17:31.808+00" — convert to ISO
-  return new Date(ts.replace(' ', 'T').replace('+00', '+00:00'));
+  // Supabase can return: "2026-06-04 10:17:31.808+00" or "2026-06-04T10:17:31.808+00:00" etc
+  let s = String(ts).trim();
+  s = s.replace(' ', 'T');       // space to T
+  s = s.replace(/\+00$/, 'Z');   // +00 at end -> Z
+  s = s.replace(/\+00:00$/, 'Z'); // +00:00 at end -> Z
+  return new Date(s);
 }
 
 function getLocalDate() {
