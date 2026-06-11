@@ -741,7 +741,7 @@ async function submitCorrection() {
   const type = document.getElementById('corrType').value;
   if (!date || !time) { toast('Preencha data e horário', 'error'); return; }
   try {
-    await api('POST', 'correction_requests', {
+    await api('POST', 'solicitacao_correcao_ponto', {
       employee: selectedEmp,
       date: date,
       type: type,
@@ -763,7 +763,7 @@ async function submitMedical() {
   const note = document.getElementById('medNote').value.trim();
   if (!date) { toast('Selecione a data', 'error'); return; }
   try {
-    await api('POST', 'medical_leave', {
+    await api('POST', 'atestado_medico', {
       employee: selectedEmp,
       date: date,
       note: note || null
@@ -781,8 +781,8 @@ async function loadPendingRequests() {
   const listEl = document.getElementById('pendingList');
   try {
     const [corrections, medicals] = await Promise.all([
-      api('GET', 'correction_requests?status=eq.pending&order=created_at.desc&select=*'),
-      api('GET', 'medical_leave?order=created_at.desc&select=*')
+      api('GET', 'solicitacao_correcao_ponto?status=eq.pending&order=created_at.desc&select=*'),
+      api('GET', 'atestado_medico?order=created_at.desc&select=*')
     ]);
     pendingCorrections = corrections;
     const total = corrections.length + medicals.length;
@@ -874,7 +874,7 @@ async function approveCorrection() {
       notes: `Corrigido pelo supervisor (original: ${req.requested_time})`
     });
     // Mark request as approved
-    await fetch(SUPABASE_URL + '/rest/v1/correction_requests?id=eq.' + currentCorrectionId, {
+    await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + currentCorrectionId, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -897,7 +897,7 @@ async function approveCorrection() {
 // ── DISMISS REQUEST ──
 async function dismissRequest(id) {
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/correction_requests?id=eq.' + id, {
+    await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + id, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -914,7 +914,7 @@ async function dismissRequest(id) {
 
 async function dismissMedical(id) {
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/medical_leave?id=eq.' + id, {
+    await fetch(SUPABASE_URL + '/rest/v1/atestado_medico?id=eq.' + id, {
       method: 'DELETE',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -967,7 +967,7 @@ async function loadSummary() {
     const rows = await api('GET', query);
 
     // Also get medical leave for period
-    let medQuery = `medical_leave?date=gte.${from}&date=lte.${to}&select=employee,date,note`;
+    let medQuery = `atestado_medico?date=gte.${from}&date=lte.${to}&select=employee,date,note`;
     if (empFilter) medQuery += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const medRows = await api('GET', medQuery);
 
