@@ -354,7 +354,7 @@ async function loadTodayLog() {
     const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`);
     if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
     logEl.innerHTML = '<div class="log-list">' + rows.map(r => {
-      const t = parseTS(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const t = parseTS(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
       const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
       const corrBadge = r.is_corrected ? '<span class="log-corrected-badge">corrigido</span>' : '';
       const noteHtml = r.notes ? `<div class="log-note">📝 ${r.notes}</div>` : '';
@@ -410,7 +410,7 @@ async function updatePunchBtn() {
       badge.className = 'status-badge badge-in'; statusText.textContent = 'Trabalhando';
       hint.textContent = 'Toque para registrar saída';
     }
-    lastPunch.textContent = last ? parseTS(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    lastPunch.textContent = last ? parseTS(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : '—';
   } catch(e) { console.error(e); }
 }
 
@@ -715,13 +715,16 @@ function buildReportRows(byEmp, payByEmp) {
         allRows.push({ emp, date: ds, entrada:'—', saida:'—', total:'—', pagamento:'—', tipo:'Licença Médica', descricao: punches[0].medical_note||'', corrigido: false });
         return;
       }
-      let mins = 0, inT = '—', outT = '—', corrected = false;
+      let mins = 0, corrected = false;
+      const pairs = [];
       for (let i = 0; i < punches.length - 1; i++) {
         if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-          inT = parseTS(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-          outT = parseTS(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-          mins += (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
+          const inT = parseTS(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+          const outT = parseTS(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+          const pairMins = (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
+          mins += pairMins;
           if (punches[i].is_corrected || punches[i+1].is_corrected) corrected = true;
+          pairs.push({ inT, outT });
           i++;
         }
       }
@@ -735,7 +738,10 @@ function buildReportRows(byEmp, payByEmp) {
       if (tipoDia==='feriado'||tipoDia==='domingo') { pay = hrs*(rates.holiday||rates.sunday||rates.regular||0); }
       else if (tipoDia==='sabado') { const s=rates.saturdayThreshold||4; pay=(Math.min(hrs,s)*(rates.saturday||rates.regular||0))+(Math.max(0,hrs-s)*(rates.overtime||0)); }
       else { pay=(Math.min(hrs,threshold)*(rates.regular||0))+(Math.max(0,hrs-threshold)*(rates.overtime||0)); }
-      allRows.push({ emp, date: ds, entrada: inT, saida: outT, total: `${h}h${String(m2).padStart(2,'0')}m`, pagamento: `R$ ${pay.toFixed(2)}`, tipo: tipoLabel, descricao: dayNote, corrigido: corrected });
+      // Show all pairs: first pair gets total/payment, subsequent pairs get blank total
+      const entradaStr = pairs.map(p => p.inT).join(' / ') || '—';
+      const saidaStr = pairs.map(p => p.outT).join(' / ') || '—';
+      allRows.push({ emp, date: ds, entrada: entradaStr, saida: saidaStr, total: `${h}h${String(m2).padStart(2,'00')}m`, pagamento: `R$ ${pay.toFixed(2)}`, tipo: tipoLabel, descricao: dayNote, corrigido: corrected });
     });
   });
   return allRows;
