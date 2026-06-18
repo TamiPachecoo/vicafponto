@@ -134,6 +134,15 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .export-btn:hover { border-color: var(--accent); color: var(--accent); }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
 .loading { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
+.edit-punch-row { display: flex; gap: 8px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; }
+.edit-punch-row select { flex: 0 0 100px; margin-bottom: 0; }
+.edit-punch-row input[type="time"] { flex: 1; margin-bottom: 0; }
+.edit-punch-row .ep-remove { background: var(--red-dim); color: var(--red); border: none; border-radius: 8px; width: 32px; height: 32px; flex-shrink: 0; cursor: pointer; font-size: 14px; }
+.edit-punch-row.deleted { opacity: 0.4; }
+.day-edit-trigger { font-size: 11px; color: var(--accent); cursor: pointer; margin-left: 6px; text-decoration: underline; }
+.summary-row-clickable { cursor: pointer; }
+.hours-breakdown { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.hours-chip { font-size: 10px; padding: 2px 7px; border-radius: 6px; background: var(--surface2); color: var(--text2); }
 </style>
 </head>
 <body>
@@ -251,12 +260,24 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </div>
 
+<div class="modal-overlay" id="editDayModal">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('editDayModal')">✕</button>
+    <div class="modal-title" id="editDayTitle">Editar registros do dia</div>
+    <div id="editDayPunches"></div>
+    <button class="action-btn blue" style="width:100%;margin-bottom:16px;padding:11px" onclick="addEditPunchRow()">+ Adicionar registro</button>
+    <button class="modal-btn green" onclick="saveEditDay()">Salvar alterações</button>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1b256d3ZxcXdiZ2NlZGlkeWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTk0MDIsImV4cCI6MjA5NTgzNTQwMn0.0xbSS5-Mr3O6bRfAjxuK9UPttvWeXcigjmuKRJZ0ctY';
 
 let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {};
 let pendingCorrections = [], currentCorrectionId = null;
+let editDayContext = null; // { employee, date, originalPunches }
+let editDayRows = []; // working copy: [{id, type, time, isNew, deleted}]
 
 async function api(method, path, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
@@ -422,13 +443,18 @@ async function doPunch() {
   const last = rows[0];
   const type = (!last || last.type === 'clock_out') ? 'clock_in' : 'clock_out';
   const note = document.getElementById('dailyNote').value.trim();
+  btn.classList.add('disabled');
+  btn.style.pointerEvents = 'none';
   try {
     btn.style.opacity = '0.5';
     await api('POST', 'time_logs', { employee: selectedEmp, type, timestamp: new Date().toISOString(), date: today, notes: note||null });
     toast(`${type==='clock_in'?'Entrada':'Saída'} registrada — ${selectedEmp}`, 'success');
     await Promise.all([loadTodayStatus(), updatePunchBtn(), loadTodayLog()]);
   } catch(e) { toast('Erro ao registrar. Tente novamente.','error'); }
-  finally { btn.style.opacity = '1'; }
+  finally {
+    btn.style.opacity = '1';
+    setTimeout(() => { btn.style.pointerEvents = ''; }, 3000);
+  }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('show'); }
@@ -565,6 +591,104 @@ async function dismissMedical(id) {
   } catch(e) { toast('Erro','error'); }
 }
 
+// ── EDIT DAY (supervisor fixes any/all punches for a given employee+date) ──
+function openEditDayModal(employee, date) {
+  const data = window._lastReportData;
+  if (!data || !data.byEmp[employee] || !data.byEmp[employee].punches[date]) { toast('Dados não encontrados','error'); return; }
+  const punches = data.byEmp[employee].punches[date];
+  if (punches[0] && punches[0].type === 'medical') { toast('Este dia é licença médica — sem registros de ponto para editar','error'); return; }
+
+  editDayContext = { employee, date };
+  editDayRows = punches.map(p => ({
+    id: p.id || null,
+    type: p.type,
+    time: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
+    isNew: false,
+    deleted: false
+  }));
+
+  const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('editDayTitle').textContent = `${employee} — ${ds}`;
+  renderEditDayRows();
+  openModal('editDayModal');
+}
+
+function renderEditDayRows() {
+  const container = document.getElementById('editDayPunches');
+  container.innerHTML = editDayRows.map((r, i) => {
+    if (r.deleted) return '';
+    return `<div class="edit-punch-row">
+      <select onchange="editDayRows[${i}].type=this.value">
+        <option value="clock_in" ${r.type==='clock_in'?'selected':''}>Entrada</option>
+        <option value="clock_out" ${r.type==='clock_out'?'selected':''}>Saída</option>
+      </select>
+      <input type="time" value="${r.time}" onchange="editDayRows[${i}].time=this.value" />
+      <button class="ep-remove" onclick="removeEditPunchRow(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function addEditPunchRow() {
+  // Guess next type based on last row for convenience
+  const visible = editDayRows.filter(r => !r.deleted);
+  const lastType = visible.length ? visible[visible.length-1].type : 'clock_out';
+  editDayRows.push({ id: null, type: lastType === 'clock_in' ? 'clock_out' : 'clock_in', time: '', isNew: true, deleted: false });
+  renderEditDayRows();
+}
+
+function removeEditPunchRow(i) {
+  if (editDayRows[i].id) {
+    // Existing DB row — mark for deletion on save
+    editDayRows[i].deleted = true;
+  } else {
+    // Never-saved row — just remove from array
+    editDayRows.splice(i, 1);
+  }
+  renderEditDayRows();
+}
+
+async function saveEditDay() {
+  if (!editDayContext) return;
+  const { employee, date } = editDayContext;
+
+  // Validate: all visible rows need a time
+  const visible = editDayRows.filter(r => !r.deleted);
+  for (const r of visible) {
+    if (!r.time) { toast('Preencha o horário de todos os registros','error'); return; }
+  }
+
+  try {
+    for (const r of editDayRows) {
+      const timestamp = new Date(date + 'T' + r.time + ':00').toISOString();
+      if (r.deleted && r.id) {
+        // Delete existing row
+        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
+          method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+        });
+      } else if (r.deleted) {
+        continue; // never existed, nothing to do
+      } else if (r.id) {
+        // Update existing row in place — this is what makes payroll recalculate from the corrected data
+        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ type: r.type, timestamp, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() })
+        });
+      } else {
+        // New punch added by supervisor
+        await api('POST', 'time_logs', { employee, type: r.type, timestamp, date, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() });
+      }
+    }
+    toast('Registros do dia atualizados','success');
+    closeModal('editDayModal');
+    editDayContext = null; editDayRows = [];
+    loadSummary();
+  } catch(e) {
+    toast('Erro ao salvar alterações','error');
+    console.error(e);
+  }
+}
+
 const ADMIN_PASSWORD = 'Vicafhydro2026!';
 let adminUnlocked = false;
 
@@ -593,7 +717,7 @@ async function loadSummary() {
   const area = document.getElementById('summaryArea');
   area.innerHTML = '<div class="loading">Calculando...</div>';
   try {
-    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=employee,type,timestamp,date,tipo_dia,notes,is_corrected`;
+    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected`;
     if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const rows = await api('GET', query);
 
@@ -627,7 +751,7 @@ async function loadSummary() {
 
     Object.keys(byEmp).sort().forEach(emp => {
       let empTotalMins = 0, empPayTotal = 0, detailRows = '';
-      let empRegularHrs = 0, empRegularOTHrs = 0, empSaturdayHrs = 0, empSundayHolidayHrs = 0;
+      let empRegularMins = 0, empRegularOTMins = 0, empSaturdayMins = 0, empSundayHolidayMins = 0;
       const rates = hourlyRates[emp] || {};
 
       Object.keys(byEmp[emp].punches).sort().forEach(date => {
@@ -652,33 +776,34 @@ async function loadSummary() {
         const tipoDia = punches[0].tipo_dia || 'regular';
         const threshold = rates.overtimeThreshold || 8;
         const satThreshold = rates.saturdayThreshold || 4;
-        // Four buckets: horas regulares / hora extra regular (50%) / hora extra sábado (50%) / domingo-feriado (100%)
-        // Saturday rule: first satThreshold hours (default 4h) = regular pay, anything beyond = hora extra sábado (50%)
-        let pay = 0, bucketRegular = 0, bucketRegularOT = 0, bucketSaturday = 0, bucketSundayHoliday = 0;
+        // Quatro categorias: horas regulares / hora extra regular (50%) / hora extra sábado (50%) / domingo-feriado (100%)
+        // Regra do sábado: as primeiras satThreshold horas (padrão 4h) contam como horas regulares;
+        // o que passar disso é hora extra sábado (50%).
+        let pay = 0, regularMinsDay = 0, regularOTMinsDay = 0, saturdayMinsDay = 0, sundayHolidayMinsDay = 0;
         if (tipoDia === 'feriado' || tipoDia === 'domingo') {
-          bucketSundayHoliday = hrs;
+          sundayHolidayMinsDay = mins;
           pay = hrs * (rates.holiday || rates.sunday || rates.regular || 0);
         } else if (tipoDia === 'sabado') {
-          bucketRegular = Math.min(hrs, satThreshold);
-          bucketSaturday = Math.max(0, hrs - satThreshold);
-          pay = (bucketRegular * (rates.regular||0)) + (bucketSaturday * (rates.saturday||rates.overtime||0));
+          regularMinsDay = Math.min(mins, satThreshold*60);
+          saturdayMinsDay = Math.max(0, mins - satThreshold*60);
+          pay = (regularMinsDay/60*(rates.regular||0)) + (saturdayMinsDay/60*(rates.saturday||rates.overtime||0));
         } else {
-          bucketRegular = Math.min(hrs, threshold);
-          bucketRegularOT = Math.max(0, hrs - threshold);
-          pay = (bucketRegular * (rates.regular||0)) + (bucketRegularOT * (rates.overtime||0));
+          regularMinsDay = Math.min(mins, threshold*60);
+          regularOTMinsDay = Math.max(0, mins - threshold*60);
+          pay = (regularMinsDay/60*(rates.regular||0)) + (regularOTMinsDay/60*(rates.overtime||0));
         }
 
         empTotalMins += mins; empPayTotal += pay;
-        empRegularHrs += bucketRegular; empRegularOTHrs += bucketRegularOT;
-        empSaturdayHrs += bucketSaturday; empSundayHolidayHrs += bucketSundayHoliday;
+        empRegularMins += regularMinsDay; empRegularOTMins += regularOTMinsDay;
+        empSaturdayMins += saturdayMinsDay; empSundayHolidayMins += sundayHolidayMinsDay;
         const h = Math.floor(mins/60), m2 = Math.round(mins%60);
         const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
         const tipoBadge = tipoDia==='feriado'?'🔴':tipoDia==='sabado'?'🟡':tipoDia==='domingo'?'🟠':'🟢';
         const hasCorrected = punches.some(p => p.is_corrected);
-        detailRows += `<div class="summary-row">
+        detailRows += `<div class="summary-row summary-row-clickable" onclick="openEditDayModal('${emp.replace(/'/g,"\\'")}','${date}')">
           <div>
-            <div style="font-size:13px;font-weight:400">${tipoBadge} ${ds}${hasCorrected?' <span style="font-size:10px;color:var(--amber)">✎</span>':''}</div>
-            ${dayNote?`<div class="sum-note">📝 ${dayNote}</div>`:''}
+            <div style="font-size:13px;font-weight:400">${tipoBadge} ${ds}${hasCorrected?' <span style="font-size:10px;color:var(--amber)">✎</span>':''} <span class="day-edit-trigger">editar</span></div>
+            ${dayNote?`<div class="sum-note" style="max-width:220px;white-space:normal">📝 ${dayNote}</div>`:''}
           </div>
           <div style="text-align:right">
             <div class="sum-hours" style="font-size:13px">${h}h${String(m2).padStart(2,'0')}m</div>
@@ -689,18 +814,18 @@ async function loadSummary() {
 
       payByEmp[emp] = empPayTotal;
       const th = Math.floor(empTotalMins/60), tm = Math.round(empTotalMins%60);
-      const fmtH = (h) => { const hh=Math.floor(h), mm=Math.round((h-hh)*60); return `${hh}h${String(mm).padStart(2,'0')}m`; };
-      const regularPay = empRegularHrs * (rates.regular||0);
-      const regularOTPay = empRegularOTHrs * (rates.overtime||0);
-      const saturdayPay = empSaturdayHrs * (rates.saturday||rates.overtime||0);
-      const sundayHolidayPay = empSundayHolidayHrs * (rates.holiday||rates.sunday||rates.regular||0);
-      const breakdownHTML = `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;background:rgba(255,255,255,0.02)">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Horas regulares</span><span style="font-family:'DM Mono',monospace">${fmtH(empRegularHrs)} · R$ ${regularPay.toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Hora extra regular (50%)</span><span style="font-family:'DM Mono',monospace">${fmtH(empRegularOTHrs)} · R$ ${regularOTPay.toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Hora extra sábado (50%)</span><span style="font-family:'DM Mono',monospace">${fmtH(empSaturdayHrs)} · R$ ${saturdayPay.toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Domingo/Feriado (100%)</span><span style="font-family:'DM Mono',monospace">${fmtH(empSundayHolidayHrs)} · R$ ${sundayHolidayPay.toFixed(2)}</span></div>
-      </div>`;
-      html += `<div class="summary-card"><div class="summary-header" style="display:flex;justify-content:space-between;align-items:center"><span>${emp}</span><span style="color:var(--accent)">${th}h${String(tm).padStart(2,'0')}m</span></div>${breakdownHTML}${detailRows}</div>`;
+      const rh = Math.floor(empRegularMins/60), rm = Math.round(empRegularMins%60);
+      const roh = Math.floor(empRegularOTMins/60), rom = Math.round(empRegularOTMins%60);
+      const sh = Math.floor(empSaturdayMins/60), sm = Math.round(empSaturdayMins%60);
+      const eh = Math.floor(empSundayHolidayMins/60), em = Math.round(empSundayHolidayMins%60);
+      html += `<div class="summary-card"><div class="summary-header" style="display:flex;justify-content:space-between;align-items:center"><span>${emp}</span><span style="color:var(--accent)">${th}h${String(tm).padStart(2,'0')}m</span></div>
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border)" class="hours-breakdown">
+          <span class="hours-chip">Horas regulares: ${rh}h${String(rm).padStart(2,'0')}m</span>
+          <span class="hours-chip">Hora extra regular (50%): ${roh}h${String(rom).padStart(2,'0')}m</span>
+          <span class="hours-chip">Hora extra sábado (50%): ${sh}h${String(sm).padStart(2,'0')}m</span>
+          <span class="hours-chip">Domingo/Feriado (100%): ${eh}h${String(em).padStart(2,'0')}m</span>
+        </div>
+        ${detailRows}</div>`;
     });
 
     let payTotal = 0, payRows = '';
@@ -753,27 +878,29 @@ function buildReportRows(byEmp, payByEmp) {
       const tipoDia = punches[0].tipo_dia || 'regular';
       const tipoLabel = tipoDia==='feriado'?'Feriado':tipoDia==='sabado'?'Sábado':tipoDia==='domingo'?'Domingo':'Regular';
       const hrs = mins/60;
-      let pay = 0, regularHrs = 0, regularOTHrs = 0, saturdayHrs = 0, sundayHolidayHrs = 0;
+      let pay = 0, regularMins = 0, regularOTMins = 0, saturdayMins = 0, sundayHolidayMins = 0;
       const threshold = rates.overtimeThreshold||8;
       const satThreshold = rates.saturdayThreshold||4;
-      // Four buckets: horas regulares / hora extra regular (50%) / hora extra sábado (50%) / domingo-feriado (100%)
-      // Saturday rule: first satThreshold hours (default 4h) = regular pay, anything beyond = hora extra sábado (50%)
+      // Quatro categorias: horas regulares / hora extra regular (50%) / hora extra sábado (50%) / domingo-feriado (100%)
+      // Regra do sábado: as primeiras satThreshold horas (padrão 4h) são pagas como horas regulares,
+      // o excedente é hora extra sábado (50%).
       if (tipoDia==='feriado'||tipoDia==='domingo') {
-        sundayHolidayHrs = hrs;
+        sundayHolidayMins = mins;
         pay = hrs*(rates.holiday||rates.sunday||rates.regular||0);
       } else if (tipoDia==='sabado') {
-        regularHrs = Math.min(hrs, satThreshold);
-        saturdayHrs = Math.max(0, hrs - satThreshold);
-        pay = (regularHrs*(rates.regular||0)) + (saturdayHrs*(rates.saturday||rates.overtime||0));
+        regularMins = Math.min(mins, satThreshold*60);
+        saturdayMins = Math.max(0, mins - satThreshold*60);
+        pay = (regularMins/60*(rates.regular||0)) + (saturdayMins/60*(rates.saturday||rates.overtime||0));
       } else {
-        regularHrs = Math.min(hrs, threshold);
-        regularOTHrs = Math.max(0, hrs - threshold);
-        pay = (regularHrs*(rates.regular||0)) + (regularOTHrs*(rates.overtime||0));
+        regularMins = Math.min(mins, threshold*60);
+        regularOTMins = Math.max(0, mins - threshold*60);
+        pay = (regularMins/60*(rates.regular||0)) + (regularOTMins/60*(rates.overtime||0));
       }
       // Show all pairs: first pair gets total/payment, subsequent pairs get blank total
       const entradaStr = pairs.map(p => p.inT).join(' / ') || '—';
       const saidaStr = pairs.map(p => p.outT).join(' / ') || '—';
-      allRows.push({ emp, date: ds, entrada: entradaStr, saida: saidaStr, total: `${h}h${String(m2).padStart(2,'00')}m`, pagamento: `R$ ${pay.toFixed(2)}`, tipo: tipoLabel, descricao: dayNote, corrigido: corrected, regularHrs, regularOTHrs, saturdayHrs, sundayHolidayHrs });
+      const fmtMins = (m) => { const hh=Math.floor(m/60), mm=Math.round(m%60); return `${hh}h${String(mm).padStart(2,'0')}m`; };
+      allRows.push({ emp, date: ds, entrada: entradaStr, saida: saidaStr, total: `${h}h${String(m2).padStart(2,'0')}m`, pagamento: `R$ ${pay.toFixed(2)}`, tipo: tipoLabel, descricao: dayNote, corrigido: corrected, regularStr: fmtMins(regularMins), regularOTStr: fmtMins(regularOTMins), saturdayStr: fmtMins(saturdayMins), sundayHolidayStr: fmtMins(sundayHolidayMins), regularMins, regularOTMins, saturdayMins, sundayHolidayMins });
     });
   });
   return allRows;
@@ -862,84 +989,86 @@ function exportPDF() {
       doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
       doc.text(emp.toUpperCase(),20,y+8);
       y += 18;
-      const cols = [14,65,95,115,135,152,175];
+      const cols = [14,60,82,104,126,142,168];
       const headers = ['Data','Entrada','Saída','Total','Tipo','Pagamento','Descrição'];
-      doc.setFillColor(59,130,246); doc.rect(14,y,W-28,7,'F');
-      doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-      headers.forEach((h,i) => doc.text(h,cols[i]+1,y+5));
-      y += 9;
-      let totalMins = 0, rowIdx = 0;
-      let totalRegularHrs = 0, totalRegularOTHrs = 0, totalSaturdayHrs = 0, totalSundayHolidayHrs = 0;
+      const drawHeader = () => {
+        doc.setFillColor(59,130,246); doc.rect(14,y,W-28,7,'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+        headers.forEach((h,i) => doc.text(h,cols[i]+1,y+5));
+        y += 9;
+      };
+      drawHeader();
+      let totalMins = 0, totalRegular = 0, totalRegularOT = 0, totalSaturday = 0, totalSundayHoliday = 0, rowIdx = 0;
       empGroups[emp].forEach(r => {
-        if (y > H-25) { doc.addPage(); addPage(); y=36;
-          doc.setFillColor(59,130,246); doc.rect(14,y,W-28,7,'F');
-          doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-          headers.forEach((h,i) => doc.text(h,cols[i]+1,y+5)); y+=9; rowIdx=0;
-        }
-        if (rowIdx%2===0) { doc.setFillColor(...lightGray); doc.rect(14,y-1,W-28,8,'F'); }
+        // Estimate row height: 8mm base, +4mm if there's a description that needs its own line
+        const rowH = r.descricao ? 12 : 8;
+        if (y + rowH > H-25) { doc.addPage(); addPage(); y=36; drawHeader(); rowIdx=0; }
+
+        if (rowIdx%2===0) { doc.setFillColor(...lightGray); doc.rect(14,y-1,W-28,rowH,'F'); }
+
         if (r.tipo==='Licença Médica') doc.setTextColor(59,130,246);
         else if (r.tipo==='Feriado') doc.setTextColor(239,68,68);
         else if (r.tipo==='Sábado') doc.setTextColor(245,158,11);
         else if (r.tipo==='Domingo') doc.setTextColor(249,115,22);
         else doc.setTextColor(...darkText);
         doc.setFontSize(7.5); doc.setFont('helvetica',r.corrigido?'italic':'normal');
-        doc.text(r.date.substring(0,20),cols[0],y+5);
+        doc.text(r.date.substring(0,22),cols[0],y+5);
         doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-        doc.text(r.entrada,cols[1],y+5); doc.text(r.saida,cols[2],y+5);
+        doc.text(r.entrada,cols[1],y+5,{maxWidth:20}); doc.text(r.saida,cols[2],y+5,{maxWidth:20});
         doc.setFont('helvetica','bold'); doc.text(r.total,cols[3],y+5);
         doc.setFont('helvetica','normal'); doc.setFontSize(7);
         doc.text(r.tipo,cols[4],y+5);
         doc.setTextColor(...blue); doc.setFont('helvetica','bold');
         doc.text(r.pagamento,cols[5],y+5);
         doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-        if (r.descricao) { const desc = r.descricao.length>22?r.descricao.substring(0,22)+'…':r.descricao; doc.text(desc,cols[6],y+5); }
+        if (r.descricao) {
+          doc.setFontSize(6.5); doc.setFont('helvetica','italic'); doc.setTextColor(90,100,115);
+          const wrapped = doc.splitTextToSize('Obs: ' + r.descricao, W-28-cols[6]+14-4);
+          doc.text(wrapped.slice(0,1), cols[6], y+5);
+          if (wrapped.length > 1) doc.text(wrapped.slice(1,2), 14, y+10);
+        }
         const match = r.total.match(/(\d+)h(\d+)m/);
         if (match) totalMins += parseInt(match[1])*60+parseInt(match[2]);
-        if (r.regularHrs) totalRegularHrs += r.regularHrs;
-        if (r.regularOTHrs) totalRegularOTHrs += r.regularOTHrs;
-        if (r.saturdayHrs) totalSaturdayHrs += r.saturdayHrs;
-        if (r.sundayHolidayHrs) totalSundayHolidayHrs += r.sundayHolidayHrs;
-        y += 8; rowIdx++;
+        if (r.regularMins) totalRegular += r.regularMins;
+        if (r.regularOTMins) totalRegularOT += r.regularOTMins;
+        if (r.saturdayMins) totalSaturday += r.saturdayMins;
+        if (r.sundayHolidayMins) totalSundayHoliday += r.sundayHolidayMins;
+        y += rowH; rowIdx++;
       });
       y += 4;
-      const rates = hourlyRates[emp] || {};
-      const regularPay = totalRegularHrs * (rates.regular||0);
-      const regularOTPay = totalRegularOTHrs * (rates.overtime||0);
-      const saturdayPay = totalSaturdayHrs * (rates.saturday||rates.overtime||0);
-      const sundayHolidayPay = totalSundayHolidayHrs * (rates.holiday||rates.sunday||rates.regular||0);
-      const fmtH = (h) => { const hh=Math.floor(h), mm=Math.round((h-hh)*60); return `${hh}h${String(mm).padStart(2,'0')}m`; };
-      const boxH = 42;
-      if (y > H-boxH-15) { doc.addPage(); addPage(); y = 36; }
+      const fmtTotal = (m) => { const hh=Math.floor(m/60), mm=Math.round(m%60); return `${hh}h${String(mm).padStart(2,'0')}m`; };
+      if (y > H-58) { doc.addPage(); addPage(); y = 36; }
       doc.setFillColor(240,247,255); doc.setDrawColor(...blue);
-      doc.roundedRect(14,y,W-28,boxH,2,2,'FD');
+      doc.roundedRect(14,y,W-28,38,2,2,'FD');
       doc.setTextColor(...darkText); doc.setFontSize(8); doc.setFont('helvetica','bold');
-      doc.text('Resumo de horas e pagamento do período',20,y+7);
+      doc.text('Resumo de horas do período',20,y+8);
       doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-      doc.text('Horas regulares:',20,y+14);
-      doc.text('Hora extra regular (50%):',20,y+20);
-      doc.text('Hora extra sábado (50%):',20,y+26);
-      doc.text('Domingo/Feriado (100%):',20,y+32);
+      doc.text('Horas regulares:',20,y+15);
+      doc.text('Hora extra regular (50%):',20,y+21);
+      doc.text('Hora extra sábado (50%):',20,y+27);
+      doc.text('Domingo/Feriado (100%):',20,y+33);
       doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
-      doc.text(fmtH(totalRegularHrs),85,y+14);
-      doc.text(fmtH(totalRegularOTHrs),85,y+20);
-      doc.text(fmtH(totalSaturdayHrs),85,y+26);
-      doc.text(fmtH(totalSundayHolidayHrs),85,y+32);
+      doc.text(fmtTotal(totalRegular),95,y+15);
+      doc.text(fmtTotal(totalRegularOT),95,y+21);
+      doc.text(fmtTotal(totalSaturday),95,y+27);
+      doc.text(fmtTotal(totalSundayHoliday),95,y+33);
       doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-      doc.text(`R$ ${regularPay.toFixed(2)}`,110,y+14);
-      doc.text(`R$ ${regularOTPay.toFixed(2)}`,110,y+20);
-      doc.text(`R$ ${saturdayPay.toFixed(2)}`,110,y+26);
-      doc.text(`R$ ${sundayHolidayPay.toFixed(2)}`,110,y+32);
-      const th=Math.floor(totalMins/60),tm2=totalMins%60;
-      doc.setFont('helvetica','normal'); doc.setTextColor(...darkText);
-      doc.text('Total de horas:',150,y+14);
+      doc.text('Total de horas:',125,y+15);
+      doc.text('Pagamento estimado:',125,y+21);
       doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
-      doc.text(`${th}h${String(tm2).padStart(2,'0')}m`,182,y+14);
-      doc.setFont('helvetica','normal'); doc.setTextColor(...darkText);
-      doc.text('Pagamento total:',150,y+20);
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...blue);
-      doc.text(`R$ ${(payByEmp[emp]||0).toFixed(2)}`,182,y+20.5);
-      y += boxH + 8;
+      doc.text(fmtTotal(totalMins),178,y+15);
+      doc.setFontSize(9);
+      doc.text(`R$ ${(payByEmp[emp]||0).toFixed(2)}`,178,y+21.5);
+      y += 46;
       if (y < H-35) {
+        doc.setDrawColor(180,195,210); doc.setLineWidth(0.3);
+        doc.line(14,y+10,90,y+10); doc.line(W-90,y+10,W-14,y+10);
+        doc.setTextColor(120,140,160); doc.setFontSize(7); doc.setFont('helvetica','normal');
+        doc.text('Assinatura do Funcionário',14,y+15);
+        doc.text('Assinatura do Supervisor',W-90,y+15);
+        doc.text(emp,14,y+20);
+      } else {
+        doc.addPage(); addPage(); y = 40;
         doc.setDrawColor(180,195,210); doc.setLineWidth(0.3);
         doc.line(14,y+10,90,y+10); doc.line(W-90,y+10,W-14,y+10);
         doc.setTextColor(120,140,160); doc.setFontSize(7); doc.setFont('helvetica','normal');
