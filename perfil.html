@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vicaf Hydro — Perfil</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
+  --accent: #3b82f6; --accent-dim: #1d3a6b;
+  --green: #22c55e; --green-dim: #14532d;
+  --red: #ef4444; --red-dim: #7f1d1d;
+  --amber: #f59e0b; --amber-dim: #451a03;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #475569;
+  --radius: 16px; --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+
+/* ── HEADER ── */
+.header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 20px; height: 20px; fill: var(--accent); }
+.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.logo-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.mode-pill {
+  font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 20px;
+  cursor: pointer; user-select: none; transition: all .2s;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text2);
+}
+.mode-pill.supervisor { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+
+/* ── MAIN ── */
+.main { max-width: 480px; margin: 0 auto; padding: 20px 16px 48px; }
+
+/* ── SCREEN: SELECT EMPLOYEE ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+.section-label {
+  font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text3); margin-bottom: 12px;
+}
+
+.emp-grid { display: flex; flex-direction: column; gap: 8px; }
+.emp-btn {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  cursor: pointer; transition: border-color .15s; text-align: left; width: 100%;
+  color: var(--text);
+}
+.emp-btn:active { transform: scale(0.99); }
+.emp-btn:hover { border-color: var(--accent); }
+.emp-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.emp-name { font-size: 15px; font-weight: 500; }
+.emp-cargo { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* ── BACK BUTTON ── */
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--text2);
+  font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 18px;
+  font-family: 'DM Sans', sans-serif;
+}
+.back-btn svg { width: 16px; height: 16px; fill: var(--text2); }
+.back-btn:hover { color: var(--text); }
+
+/* ── PROFILE CARD ── */
+.profile-header {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+}
+.profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 22px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.profile-name { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.profile-cargo { font-size: 13px; color: var(--text2); margin-top: 3px; }
+.profile-admissao { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+/* ── SECTIONS ── */
+.section-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+.section-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.section-title span { font-size: 16px; }
+
+.info-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 14px; }
+.info-row:last-child { margin-bottom: 0; }
+.info-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--text3); font-weight: 500; }
+.info-value { font-size: 14px; color: var(--text); }
+.info-value.empty { color: var(--text3); font-style: italic; font-size: 13px; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ── STATUS BADGE (exames/NRs) ── */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 6px; white-space: nowrap;
+}
+.badge-ok    { background: var(--green-dim); color: var(--green); }
+.badge-warn  { background: var(--amber-dim); color: var(--amber); }
+.badge-expired { background: var(--red-dim); color: var(--red); }
+.badge-none  { background: var(--surface2); color: var(--text3); }
+
+/* ── DOC ITEMS ── */
+.doc-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.doc-item:last-child { border-bottom: none; padding-bottom: 0; }
+.doc-item:first-child { padding-top: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.doc-dates { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.doc-obs { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+.empty-docs {
+  text-align: center; padding: 20px 0;
+  color: var(--text3); font-size: 13px; font-style: italic;
+}
+
+/* ── EDIT BUTTONS ── */
+.edit-section-btn {
+  display: block; width: 100%; margin-top: 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px;
+  color: var(--text2); font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; text-align: center;
+}
+.edit-section-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.add-doc-btn {
+  display: block; width: 100%; margin-top: 12px;
+  background: none; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 10px;
+  color: var(--text3); font-size: 12px;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; text-align: center;
+}
+.add-doc-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 100;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 24px 20px 32px; width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); width: 30px; height: 30px;
+  border-radius: 50%; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-wrap { position: relative; }
+.modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; padding-right: 36px; }
+.modal-label { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--text3); font-weight: 500; margin-bottom: 6px; margin-top: 14px; }
+.modal-label:first-of-type { margin-top: 0; }
+.modal input, .modal textarea, .modal select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px;
+  font-size: 14px; color: var(--text); font-family: 'DM Sans', sans-serif;
+}
+.modal input:focus, .modal textarea:focus, .modal select:focus {
+  outline: none; border-color: var(--accent);
+}
+.modal textarea { resize: vertical; min-height: 72px; }
+.modal select option { background: var(--surface2); }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-btn {
+  display: block; width: 100%; margin-top: 18px;
+  padding: 13px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; border: none; transition: opacity .15s;
+}
+.modal-btn:active { opacity: .8; }
+.modal-btn.primary { background: var(--accent); color: #fff; }
+.modal-btn.danger  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); margin-top: 10px; }
+
+.modal-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 11px 20px; border-radius: 24px;
+  font-size: 13px; font-weight: 500; z-index: 200;
+  transition: transform .25s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red); color: var(--red); }
+.toast.warn    { border-color: var(--amber); color: var(--amber); }
+
+/* ── LOADING ── */
+.loading { text-align: center; color: var(--text3); padding: 32px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Vicaf Hydro</div>
+      <div class="logo-sub">Perfil do Funcionário</div>
+    </div>
+  </div>
+  <div class="mode-pill" id="modePill" onclick="toggleSupervisor()">👤 Funcionário</div>
+</div>
+
+<div class="main">
+
+  <!-- SCREEN: SELECT EMPLOYEE -->
+  <div class="screen active" id="screenSelect">
+    <div class="section-label" id="selectLabel">Selecione seu nome</div>
+    <div class="emp-grid" id="empGrid">
+      <div class="loading">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- SCREEN: PROFILE -->
+  <div class="screen" id="screenProfile">
+    <button class="back-btn" onclick="goBack()">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      Voltar
+    </button>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <div>
+        <div class="profile-name" id="profileName"></div>
+        <div class="profile-cargo" id="profileCargo"></div>
+        <div class="profile-admissao" id="profileAdmissao"></div>
+      </div>
+    </div>
+
+    <!-- SECTION: Dados Pessoais -->
+    <div class="section-card" id="sectionDados">
+      <div class="section-title"><span>📋</span> Dados Pessoais</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Telefone</div>
+          <div class="info-value" id="infoTelefone">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Admissão</div>
+          <div class="info-value" id="infoAdmissao">—</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:16px"><span>🚨</span> Contato de Emergência</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Nome</div>
+          <div class="info-value" id="infoEmergNome">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Parentesco</div>
+          <div class="info-value" id="infoEmergParentesco">—</div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Telefone 1</div>
+          <div class="info-value" id="infoEmergTel">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Telefone 2</div>
+          <div class="info-value" id="infoEmergTel2">—</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:16px"><span>🏥</span> Saúde</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Tipo Sanguíneo</div>
+          <div class="info-value" id="infoTipoSang">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Alergias</div>
+          <div class="info-value" id="infoAlergias">—</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Condições Médicas</div>
+        <div class="info-value" id="infoCondicoes">—</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Medicamentos em Uso</div>
+        <div class="info-value" id="infoMedicamentos">—</div>
+      </div>
+
+      <button class="edit-section-btn" id="btnEditDados" style="display:none" onclick="openEditDadosModal()">✏️ Editar informações</button>
+    </div>
+
+    <!-- SECTION: Exames -->
+    <div class="section-card">
+      <div class="section-title"><span>📄</span> Exames Ocupacionais</div>
+      <div id="examesArea"><div class="loading">Carregando...</div></div>
+      <button class="add-doc-btn" id="btnAddExame" style="display:none" onclick="openAddExameModal()">+ Adicionar exame</button>
+    </div>
+
+    <!-- SECTION: NRs -->
+    <div class="section-card">
+      <div class="section-title"><span>📜</span> Treinamentos NR</div>
+      <div id="nrsArea"><div class="loading">Carregando...</div></div>
+      <button class="add-doc-btn" id="btnAddNR" style="display:none" onclick="openAddNRModal()">+ Adicionar NR</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL: Edit Dados -->
+<div class="modal-overlay" id="modalDados">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalDados')">✕</button>
+    <div class="modal-title" id="modalDadosTitle">Editar Dados</div>
+
+    <div class="modal-label">Cargo</div>
+    <input type="text" id="editCargo" placeholder="Ex: Mecânico">
+
+    <div class="modal-label">Data de Admissão</div>
+    <input type="date" id="editAdmissao">
+
+    <div class="modal-label">Telefone Pessoal</div>
+    <input type="tel" id="editTelefone" placeholder="(00) 00000-0000">
+
+    <hr class="modal-divider">
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px;">🚨 Contato de Emergência</div>
+
+    <div class="modal-label">Nome</div>
+    <input type="text" id="editEmergNome" placeholder="Nome completo">
+
+    <div class="modal-label">Parentesco</div>
+    <input type="text" id="editEmergParentesco" placeholder="Ex: Cônjuge, Mãe, Pai...">
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Telefone 1</div>
+        <input type="tel" id="editEmergTel" placeholder="(00) 00000-0000">
+      </div>
+      <div>
+        <div class="modal-label">Telefone 2</div>
+        <input type="tel" id="editEmergTel2" placeholder="(opcional)">
+      </div>
+    </div>
+
+    <hr class="modal-divider">
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px;">🏥 Saúde</div>
+
+    <div class="modal-label">Tipo Sanguíneo</div>
+    <select id="editTipoSang">
+      <option value="">Não informado</option>
+      <option>A+</option><option>A-</option>
+      <option>B+</option><option>B-</option>
+      <option>AB+</option><option>AB-</option>
+      <option>O+</option><option>O-</option>
+    </select>
+
+    <div class="modal-label">Alergias</div>
+    <textarea id="editAlergias" placeholder="Liste alergias conhecidas ou escreva 'Nenhuma'"></textarea>
+
+    <div class="modal-label">Condições Médicas</div>
+    <textarea id="editCondicoes" placeholder="Hipertensão, diabetes, etc."></textarea>
+
+    <div class="modal-label">Medicamentos em Uso</div>
+    <textarea id="editMedicamentos" placeholder="Nome e dosagem dos medicamentos"></textarea>
+
+    <button class="modal-btn primary" onclick="saveDados()">Salvar alterações</button>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit Exame -->
+<div class="modal-overlay" id="modalExame">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalExame')">✕</button>
+    <div class="modal-title" id="modalExameTitle">Exame Ocupacional</div>
+
+    <div class="modal-label">Tipo de Exame</div>
+    <input type="text" id="editExameTipo" placeholder="Ex: ASO Periódico, Audiometria...">
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Data de Realização</div>
+        <input type="date" id="editExameData">
+      </div>
+      <div>
+        <div class="modal-label">Validade</div>
+        <input type="date" id="editExameValidade">
+      </div>
+    </div>
+
+    <div class="modal-label">Observação (opcional)</div>
+    <textarea id="editExameObs" placeholder="Observações adicionais"></textarea>
+
+    <button class="modal-btn primary" onclick="saveExame()">Salvar</button>
+    <button class="modal-btn danger" id="btnDeleteExame" onclick="deleteExame()" style="display:none">Excluir exame</button>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit NR -->
+<div class="modal-overlay" id="modalNR">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalNR')">✕</button>
+    <div class="modal-title" id="modalNRTitle">Treinamento NR</div>
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Código NR</div>
+        <input type="text" id="editNRCodigo" placeholder="Ex: NR-10">
+      </div>
+      <div>
+        <div class="modal-label">Nome</div>
+        <input type="text" id="editNRNome" placeholder="Ex: Elétrica">
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Data de Realização</div>
+        <input type="date" id="editNRData">
+      </div>
+      <div>
+        <div class="modal-label">Validade</div>
+        <input type="date" id="editNRValidade">
+      </div>
+    </div>
+
+    <div class="modal-label">Observação (opcional)</div>
+    <textarea id="editNRObs" placeholder="Observações adicionais"></textarea>
+
+    <button class="modal-btn primary" onclick="saveNR()">Salvar</button>
+    <button class="modal-btn danger" id="btnDeleteNR" onclick="deleteNR()" style="display:none">Excluir NR</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
+const ADMIN_PASSWORD = 'Vicafhydro2026!';
+
+// Supervisors who get full edit access
+const SUPERVISORS = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Tami Pacheco'];
+
+let isSupervisor = false;
+let currentEmployee = null;   // name string
+let currentPerfil = null;     // perfil_funcionario row
+let currentExameId = null;
+let currentNRId = null;
+let allEmployees = [];        // [{full_name, cargo}]
+
+// ── API ──
+async function api(method, path, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  if (method === 'DELETE') return true;
+  return res.json();
+}
+
+// ── TOAST ──
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+// ── MODAL ──
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── UTILS ──
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function getStatusBadge(validade) {
+  if (!validade) return `<span class="status-badge badge-none">Sem validade</span>`;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const val = new Date(validade + 'T12:00:00');
+  const diffDays = Math.floor((val - today) / 86400000);
+  if (diffDays < 0)   return `<span class="status-badge badge-expired">❌ Vencido</span>`;
+  if (diffDays <= 30) return `<span class="status-badge badge-warn">⚠️ Vence em ${diffDays}d</span>`;
+  return `<span class="status-badge badge-ok">✅ Em dia</span>`;
+}
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function setVal(id, v) { document.getElementById(id).value = v || ''; }
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() {
+  currentEmployee = null;
+  currentPerfil = null;
+  // In supervisor mode, show all; in employee mode, re-show selection
+  showScreen('screenSelect');
+}
+
+// ── SUPERVISOR TOGGLE ──
+function toggleSupervisor() {
+  if (isSupervisor) {
+    isSupervisor = false;
+    document.getElementById('modePill').textContent = '👤 Funcionário';
+    document.getElementById('modePill').classList.remove('supervisor');
+    document.getElementById('selectLabel').textContent = 'Selecione seu nome';
+    goBack();
+    return;
+  }
+  const pwd = prompt('Digite a senha do supervisor:');
+  if (pwd === null) return;
+  if (pwd !== ADMIN_PASSWORD) { toast('Senha incorreta', 'error'); return; }
+  isSupervisor = true;
+  document.getElementById('modePill').textContent = '🔓 Supervisor';
+  document.getElementById('modePill').classList.add('supervisor');
+  document.getElementById('selectLabel').textContent = 'Selecione um funcionário';
+  toast('Modo supervisor ativado', 'success');
+  // Rebuild grid (same, but now clicking any name works)
+  buildEmpGrid();
+  if (currentEmployee) openProfile(currentEmployee); // refresh edit buttons
+}
+
+// ── EMPLOYEE GRID ──
+async function loadEmployees() {
+  try {
+    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name');
+    allEmployees = rows.map(r => r.full_name);
+    buildEmpGrid();
+  } catch(e) {
+    document.getElementById('empGrid').innerHTML = '<div class="loading">Erro ao carregar funcionários.</div>';
+  }
+}
+
+function buildEmpGrid() {
+  const grid = document.getElementById('empGrid');
+  if (!allEmployees.length) { grid.innerHTML = '<div class="loading">Nenhum funcionário encontrado.</div>'; return; }
+  grid.innerHTML = allEmployees.map(name => `
+    <button class="emp-btn" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar">${initials(name)}</div>
+      <div>
+        <div class="emp-name">${name}</div>
+      </div>
+    </button>
+  `).join('');
+}
+
+// ── OPEN PROFILE ──
+async function openProfile(name) {
+  // Employee mode: can only view own profile
+  // Supervisor mode: can view any
+  currentEmployee = name;
+  showScreen('screenProfile');
+
+  // Set avatar + name immediately
+  document.getElementById('profileAvatar').textContent = initials(name);
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileCargo').textContent = '';
+  document.getElementById('profileAdmissao').textContent = '';
+
+  // Show/hide edit buttons
+  const canEdit = isSupervisor || SUPERVISORS.includes(name);
+  document.getElementById('btnEditDados').style.display = canEdit ? 'block' : 'none';
+  document.getElementById('btnAddExame').style.display = canEdit ? 'block' : 'none';
+  document.getElementById('btnAddNR').style.display    = canEdit ? 'block' : 'none';
+
+  // Load data
+  await Promise.all([loadPerfil(name), loadExames(name), loadNRs(name)]);
+}
+
+// ── LOAD PERFIL ──
+async function loadPerfil(name) {
+  try {
+    const rows = await api('GET', `perfil_funcionario?employee_name=eq.${encodeURIComponent(name)}&select=*`);
+    currentPerfil = rows[0] || null;
+    renderPerfil(currentPerfil);
+  } catch(e) {
+    toast('Erro ao carregar perfil', 'error');
+  }
+}
+
+function renderPerfil(p) {
+  const def = (v) => v || '—';
+  if (!p) {
+    // No row yet
+    document.getElementById('profileCargo').textContent = '';
+    document.getElementById('profileAdmissao').textContent = '';
+    ['infoTelefone','infoEmergNome','infoEmergParentesco','infoEmergTel','infoEmergTel2',
+     'infoTipoSang','infoAlergias','infoCondicoes','infoMedicamentos'].forEach(id => {
+       const el = document.getElementById(id);
+       el.textContent = 'Não informado'; el.className = 'info-value empty';
+     });
+    document.getElementById('infoAdmissao').textContent = '—';
+    return;
+  }
+  document.getElementById('profileCargo').textContent = p.cargo || '';
+  document.getElementById('profileAdmissao').textContent = p.data_admissao ? `Desde ${fmtDate(p.data_admissao)}` : '';
+  document.getElementById('infoTelefone').textContent = def(p.telefone);
+  document.getElementById('infoAdmissao').textContent = fmtDate(p.data_admissao);
+  document.getElementById('infoEmergNome').textContent = def(p.contato_emergencia_nome);
+  document.getElementById('infoEmergParentesco').textContent = def(p.contato_emergencia_parentesco);
+  document.getElementById('infoEmergTel').textContent = def(p.contato_emergencia_tel);
+  document.getElementById('infoEmergTel2').textContent = def(p.contato_emergencia_tel2);
+  document.getElementById('infoTipoSang').textContent = def(p.tipo_sanguineo);
+  document.getElementById('infoAlergias').textContent = def(p.alergias);
+  document.getElementById('infoCondicoes').textContent = def(p.condicoes_medicas);
+  document.getElementById('infoMedicamentos').textContent = def(p.medicamentos);
+
+  // Reset classes
+  ['infoTelefone','infoAdmissao','infoEmergNome','infoEmergParentesco','infoEmergTel','infoEmergTel2',
+   'infoTipoSang','infoAlergias','infoCondicoes','infoMedicamentos'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'info-value' + (el.textContent === '—' || el.textContent === 'Não informado' ? ' empty' : '');
+  });
+}
+
+// ── LOAD EXAMES ──
+async function loadExames(name) {
+  const area = document.getElementById('examesArea');
+  try {
+    const rows = await api('GET', `exames_funcionario?employee_name=eq.${encodeURIComponent(name)}&order=data_validade.asc&select=*`);
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty-docs">Nenhum exame cadastrado</div>';
+      return;
+    }
+    area.innerHTML = rows.map(r => `
+      <div class="doc-item" onclick="${isSupervisor ? `openEditExameModal('${r.id}')` : ''}">
+        <div class="doc-info">
+          <div class="doc-name">${r.tipo_exame}</div>
+          <div class="doc-dates">
+            ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
+            ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
+          </div>
+          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+        </div>
+        ${getStatusBadge(r.data_validade)}
+      </div>
+    `).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-docs">Erro ao carregar exames</div>';
+  }
+}
+
+// ── LOAD NRs ──
+async function loadNRs(name) {
+  const area = document.getElementById('nrsArea');
+  try {
+    const rows = await api('GET', `nrs_funcionario?employee_name=eq.${encodeURIComponent(name)}&order=nr_codigo.asc&select=*`);
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty-docs">Nenhum treinamento NR cadastrado</div>';
+      return;
+    }
+    area.innerHTML = rows.map(r => `
+      <div class="doc-item" onclick="${isSupervisor ? `openEditNRModal('${r.id}')` : ''}">
+        <div class="doc-info">
+          <div class="doc-name">${r.nr_codigo}${r.nr_nome ? ' — ' + r.nr_nome : ''}</div>
+          <div class="doc-dates">
+            ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
+            ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
+          </div>
+          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+        </div>
+        ${getStatusBadge(r.data_validade)}
+      </div>
+    `).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-docs">Erro ao carregar NRs</div>';
+  }
+}
+
+// ── EDIT DADOS ──
+function openEditDadosModal() {
+  const p = currentPerfil || {};
+  document.getElementById('modalDadosTitle').textContent = `Editar — ${currentEmployee}`;
+  setVal('editCargo', p.cargo);
+  setVal('editAdmissao', p.data_admissao);
+  setVal('editTelefone', p.telefone);
+  setVal('editEmergNome', p.contato_emergencia_nome);
+  setVal('editEmergParentesco', p.contato_emergencia_parentesco);
+  setVal('editEmergTel', p.contato_emergencia_tel);
+  setVal('editEmergTel2', p.contato_emergencia_tel2);
+  setVal('editTipoSang', p.tipo_sanguineo);
+  setVal('editAlergias', p.alergias);
+  setVal('editCondicoes', p.condicoes_medicas);
+  setVal('editMedicamentos', p.medicamentos);
+  openModal('modalDados');
+}
+
+async function saveDados() {
+  const data = {
+    cargo: val('editCargo') || null,
+    data_admissao: val('editAdmissao') || null,
+    telefone: val('editTelefone') || null,
+    contato_emergencia_nome: val('editEmergNome') || null,
+    contato_emergencia_parentesco: val('editEmergParentesco') || null,
+    contato_emergencia_tel: val('editEmergTel') || null,
+    contato_emergencia_tel2: val('editEmergTel2') || null,
+    tipo_sanguineo: val('editTipoSang') || null,
+    alergias: val('editAlergias') || null,
+    condicoes_medicas: val('editCondicoes') || null,
+    medicamentos: val('editMedicamentos') || null,
+    updated_at: new Date().toISOString(),
+    updated_by: isSupervisor ? 'Supervisor' : currentEmployee
+  };
+
+  try {
+    if (currentPerfil && currentPerfil.id) {
+      await fetch(`${SUPABASE_URL}/rest/v1/perfil_funcionario?id=eq.${currentPerfil.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'perfil_funcionario', { employee_name: currentEmployee, ...data });
+    }
+    toast('Dados salvos com sucesso', 'success');
+    closeModal('modalDados');
+    await loadPerfil(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar dados', 'error');
+  }
+}
+
+// ── ADD EXAME ──
+function openAddExameModal() {
+  currentExameId = null;
+  document.getElementById('modalExameTitle').textContent = 'Adicionar Exame';
+  setVal('editExameTipo', ''); setVal('editExameData', ''); setVal('editExameValidade', ''); setVal('editExameObs', '');
+  document.getElementById('btnDeleteExame').style.display = 'none';
+  openModal('modalExame');
+}
+
+function openEditExameModal(id) {
+  // Find from DOM data isn't practical — refetch
+  currentExameId = id;
+  api('GET', `exames_funcionario?id=eq.${id}&select=*`).then(rows => {
+    const r = rows[0]; if (!r) return;
+    document.getElementById('modalExameTitle').textContent = 'Editar Exame';
+    setVal('editExameTipo', r.tipo_exame);
+    setVal('editExameData', r.data_realizacao);
+    setVal('editExameValidade', r.data_validade);
+    setVal('editExameObs', r.observacao);
+    document.getElementById('btnDeleteExame').style.display = 'block';
+    openModal('modalExame');
+  });
+}
+
+async function saveExame() {
+  const tipo = val('editExameTipo');
+  if (!tipo) { toast('Informe o tipo de exame', 'error'); return; }
+  const data = {
+    employee_name: currentEmployee,
+    tipo_exame: tipo,
+    data_realizacao: val('editExameData') || null,
+    data_validade: val('editExameValidade') || null,
+    observacao: val('editExameObs') || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (currentExameId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/exames_funcionario?id=eq.${currentExameId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'exames_funcionario', data);
+    }
+    toast('Exame salvo', 'success');
+    closeModal('modalExame');
+    await loadExames(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar exame', 'error');
+  }
+}
+
+async function deleteExame() {
+  if (!currentExameId) return;
+  if (!confirm('Excluir este exame?')) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/exames_funcionario?id=eq.${currentExameId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    });
+    toast('Exame excluído', 'warn');
+    closeModal('modalExame');
+    await loadExames(currentEmployee);
+  } catch(e) {
+    toast('Erro ao excluir', 'error');
+  }
+}
+
+// ── ADD NR ──
+function openAddNRModal() {
+  currentNRId = null;
+  document.getElementById('modalNRTitle').textContent = 'Adicionar Treinamento NR';
+  setVal('editNRCodigo', ''); setVal('editNRNome', ''); setVal('editNRData', ''); setVal('editNRValidade', ''); setVal('editNRObs', '');
+  document.getElementById('btnDeleteNR').style.display = 'none';
+  openModal('modalNR');
+}
+
+function openEditNRModal(id) {
+  currentNRId = id;
+  api('GET', `nrs_funcionario?id=eq.${id}&select=*`).then(rows => {
+    const r = rows[0]; if (!r) return;
+    document.getElementById('modalNRTitle').textContent = 'Editar Treinamento NR';
+    setVal('editNRCodigo', r.nr_codigo);
+    setVal('editNRNome', r.nr_nome);
+    setVal('editNRData', r.data_realizacao);
+    setVal('editNRValidade', r.data_validade);
+    setVal('editNRObs', r.observacao);
+    document.getElementById('btnDeleteNR').style.display = 'block';
+    openModal('modalNR');
+  });
+}
+
+async function saveNR() {
+  const codigo = val('editNRCodigo');
+  if (!codigo) { toast('Informe o código da NR (ex: NR-10)', 'error'); return; }
+  const data = {
+    employee_name: currentEmployee,
+    nr_codigo: codigo.toUpperCase(),
+    nr_nome: val('editNRNome') || null,
+    data_realizacao: val('editNRData') || null,
+    data_validade: val('editNRValidade') || null,
+    observacao: val('editNRObs') || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (currentNRId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/nrs_funcionario?id=eq.${currentNRId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'nrs_funcionario', data);
+    }
+    toast('NR salva', 'success');
+    closeModal('modalNR');
+    await loadNRs(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar NR', 'error');
+  }
+}
+
+async function deleteNR() {
+  if (!currentNRId) return;
+  if (!confirm('Excluir este treinamento NR?')) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/nrs_funcionario?id=eq.${currentNRId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    });
+    toast('NR excluída', 'warn');
+    closeModal('modalNR');
+    await loadNRs(currentEmployee);
+  } catch(e) {
+    toast('Erro ao excluir', 'error');
+  }
+}
+
+// ── INIT ──
+loadEmployees();
+</script>
+</body>
+</html>
