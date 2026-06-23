@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vicaf Hydro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vicaf Hydro">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
+  --accent: #3b82f6; --accent-dim: #1d3a6b;
+  --green: #22c55e; --green-dim: #14532d;
+  --amber: #f59e0b; --amber-dim: #451a03;
+  --purple: #a855f7; --purple-dim: #3b0764;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #475569;
+  --radius: 18px; --radius-sm: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  min-height: 100%; background: var(--bg); color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+}
+body {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; padding: 32px 20px 48px;
+}
+
+/* ── LOGO ── */
+.logo-area { text-align: center; margin-bottom: 40px; }
+.logo-icon {
+  width: 72px; height: 72px; border-radius: 22px;
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+.logo-icon svg { width: 40px; height: 40px; fill: var(--accent); }
+.logo-title {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+  color: var(--text);
+}
+.logo-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* ── APP GRID ── */
+.app-grid {
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 360px;
+}
+
+.app-card {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+  text-decoration: none; color: var(--text);
+  transition: border-color .2s, transform .15s;
+  cursor: pointer;
+}
+.app-card:active { transform: scale(0.98); }
+
+.app-card.blue  { --card-color: var(--accent);  --card-dim: var(--accent-dim); }
+.app-card.green { --card-color: var(--green);   --card-dim: var(--green-dim); }
+.app-card.amber { --card-color: var(--amber);   --card-dim: var(--amber-dim); }
+.app-card.purple{ --card-color: var(--purple);  --card-dim: var(--purple-dim); }
+
+.app-card:hover { border-color: var(--card-color); }
+
+.app-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--card-dim); border: 1px solid var(--card-color);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 24px;
+}
+.app-info { flex: 1; min-width: 0; }
+.app-name { font-size: 16px; font-weight: 600; }
+.app-desc { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.app-arrow { color: var(--text3); font-size: 18px; }
+
+/* ── INSTALL BANNER ── */
+.install-banner {
+  display: none; align-items: center; gap: 12px;
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  margin-bottom: 24px; width: 100%; max-width: 360px;
+  cursor: pointer;
+}
+.install-banner.show { display: flex; }
+.install-text { flex: 1; }
+.install-title { font-size: 13px; font-weight: 600; color: var(--accent); }
+.install-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.install-btn {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; padding: 8px 14px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; white-space: nowrap;
+}
+
+/* ── FOOTER ── */
+.footer {
+  margin-top: 40px; text-align: center;
+  font-size: 11px; color: var(--text3);
+}
+</style>
+</head>
+<body>
+
+<!-- Install Banner (shown when PWA installable) -->
+<div class="install-banner" id="installBanner">
+  <div style="font-size:24px">📲</div>
+  <div class="install-text">
+    <div class="install-title">Instalar app</div>
+    <div class="install-sub">Adicione à tela inicial do celular</div>
+  </div>
+  <button class="install-btn" onclick="installApp()">Instalar</button>
+</div>
+
+<!-- Logo -->
+<div class="logo-area">
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+  </div>
+  <div class="logo-title">Vicaf Hydro</div>
+  <div class="logo-sub">Projetos e Consultoria</div>
+</div>
+
+<!-- App Cards -->
+<div class="app-grid">
+
+  <a class="app-card blue" href="index.html">
+    <div class="app-icon">⏱️</div>
+    <div class="app-info">
+      <div class="app-name">Ponto</div>
+      <div class="app-desc">Registro de horas e jornada</div>
+    </div>
+    <div class="app-arrow">›</div>
+  </a>
+
+  <a class="app-card green" href="ferramentas.html">
+    <div class="app-icon">🔧</div>
+    <div class="app-info">
+      <div class="app-name">Ferramentas</div>
+      <div class="app-desc">Inventário de equipamentos</div>
+    </div>
+    <div class="app-arrow">›</div>
+  </a>
+
+  <a class="app-card amber" href="perfil.html">
+    <div class="app-icon">👤</div>
+    <div class="app-info">
+      <div class="app-name">Perfil</div>
+      <div class="app-desc">Dados, exames e treinamentos NR</div>
+    </div>
+    <div class="app-arrow">›</div>
+  </a>
+
+</div>
+
+<div class="footer">Vicaf Hydro © 2026</div>
+
+<script>
+// PWA install prompt
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    deferredPrompt = null;
+    document.getElementById('installBanner').classList.remove('show');
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+});
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
