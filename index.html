@@ -156,13 +156,15 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   background: var(--surface); border-top: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-around;
   padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-  z-index: 40;
+  z-index: 40; transition: transform .3s ease;
 }
+.bottom-nav.hidden { transform: translateY(100%); }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 6px 20px; border-radius: 12px; cursor: pointer;
   text-decoration: none; color: var(--text3);
   font-size: 10px; font-weight: 500; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
 }
 .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
 .nav-item.active { color: var(--accent); }
@@ -273,7 +275,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 </div>
 
 <!-- BOTTOM NAV -->
-<nav class="bottom-nav">
+<nav class="bottom-nav" id="bottomNav">
   <a class="nav-item active" href="menu.html">
     <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     Menu
@@ -1155,6 +1157,21 @@ async function init() {
   }
 }
 init();
+
+// ── SCROLL HIDE/SHOW NAV ──
+(function() {
+  let lastY = 0;
+  const nav = document.getElementById('bottomNav');
+  const main = document.querySelector('.main');
+  const onScroll = () => {
+    const y = main.scrollTop || window.scrollY;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  };
+  main.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
 </script>
 </body>
 </html>
