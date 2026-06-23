@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -25,7 +24,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .header-right { display: flex; align-items: center; gap: 10px; }
 .mode-pill { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 20px; cursor: pointer; user-select: none; transition: all .2s; font-family: 'DM Sans', sans-serif; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); }
 .mode-pill.unlocked { border-color: var(--green); color: var(--green); background: var(--green-dim); }
-.main { flex: 1; overflow-y: auto; padding: 18px 16px 32px; max-width: 480px; margin: 0 auto; width: 100%; }
+.main { flex: 1; overflow-y: auto; padding: 18px 16px 96px; max-width: 480px; margin: 0 auto; width: 100%; }
 .section-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .8px; color: var(--text3); margin-bottom: 10px; }
 .search-row { display: flex; gap: 10px; margin-bottom: 14px; }
 .search-row input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif; }
@@ -53,7 +52,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .modal-photo { width: 100%; height: 160px; border-radius: var(--radius-sm); background: var(--surface2); margin-bottom: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .modal-photo img { width: 100%; height: 100%; object-fit: contain; }
 .modal-photo svg { width: 40px; height: 40px; fill: var(--text3); }
-.modal-photo-label { font-size: 10px; color: var(--text3); text-align: center; }
 .tool-desc { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
 .tool-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
 .tool-codigo { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
@@ -66,9 +64,9 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .tool-obs { font-size: 11px; color: var(--text3); font-style: italic; margin-top: 6px; }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
 .loading { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
-.fab { position: fixed; bottom: 24px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px rgba(59,130,246,.4); display: flex; align-items: center; justify-content: center; z-index: 100; transition: transform .15s; }
+.fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px rgba(59,130,246,.4); display: flex; align-items: center; justify-content: center; z-index: 100; transition: transform .15s; }
 .fab:active { transform: scale(0.92); }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 300; transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; color: var(--text); }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 300; transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; color: var(--text); }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { border-color: var(--green); color: var(--green); }
 .toast.error { border-color: var(--red); color: var(--red); }
@@ -91,6 +89,47 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .check-row input { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
 .check-row span { font-size: 13px; color: var(--text); }
 .readonly-banner { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 13px; font-size: 12px; color: var(--text2); margin-bottom: 14px; text-align: center; }
+/* ── BOTTOM NAV + PWD MODAL ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 40; transition: transform .3s ease;
+}
+.bottom-nav.hidden { transform: translateY(100%); }
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 16px; cursor: pointer; text-decoration: none; color: var(--text3);
+  font-size: 10px; font-weight: 500; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+.nav-item.active { color: var(--accent); }
+.nav-item:active { transform: scale(0.95); }
+.pwd-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.pwd-overlay.show { opacity: 1; pointer-events: all; }
+.pwd-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px; width: 320px; max-width: 90vw;
+}
+.pwd-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.pwd-sub { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+.pwd-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px;
+  color: var(--text); font-family: 'DM Mono', monospace; margin-bottom: 12px; letter-spacing: 3px;
+}
+.pwd-input:focus { outline: none; border-color: var(--accent); }
+.pwd-error { font-size: 12px; color: var(--red); margin-bottom: 10px; display: none; }
+.pwd-btns { display: flex; gap: 10px; }
+.pwd-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.pwd-btn.cancel { background: var(--surface2); color: var(--text2); }
+.pwd-btn.confirm { background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -106,7 +145,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     </div>
   </div>
   <div class="header-right">
-    <div class="mode-pill" id="modePill" onclick="toggleAdmin()">🔒 Visualizar</div>
+    <div class="mode-pill" id="modePill" onclick="toggleAdmin()">&#x1F512; Visualizar</div>
   </div>
 </div>
 
@@ -116,46 +155,59 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <div class="summary-box"><div class="summary-num" id="totalQty">—</div><div class="summary-lbl">Quantidade</div></div>
     <div class="summary-box"><div class="summary-num" id="naoConformeCount">—</div><div class="summary-lbl">Não conforme</div></div>
   </div>
-
   <div class="search-row">
     <input type="text" id="searchInput" placeholder="Buscar por código ou descrição..." oninput="renderList()">
   </div>
   <div class="cat-scroll" id="catScroll"></div>
-
   <div id="listArea"><div class="loading">Carregando ferramentas...</div></div>
 </div>
 
 <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none">+</button>
 
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottomNav">
+  <a class="nav-item" href="menu.html"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Menu</a>
+  <a class="nav-item" href="index.html"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>Ponto</a>
+  <a class="nav-item active" href="ferramentas.html"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Ferramentas</a>
+  <a class="nav-item" href="perfil.html"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>Perfil</a>
+</nav>
+
 <div class="toast" id="toast"></div>
+
+<!-- PWD MODAL -->
+<div class="pwd-overlay" id="pwdOverlay">
+  <div class="pwd-box">
+    <div class="pwd-title">&#x1F512; Modo Edição</div>
+    <div class="pwd-sub">Digite a senha do administrador</div>
+    <input class="pwd-input" type="password" id="pwdInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') confirmPwd()">
+    <div class="pwd-error" id="pwdError">Senha incorreta. Tente novamente.</div>
+    <div class="pwd-btns">
+      <button class="pwd-btn cancel" onclick="cancelPwd()">Cancelar</button>
+      <button class="pwd-btn confirm" onclick="confirmPwd()">Entrar</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="editModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    <button class="modal-close" onclick="closeModal('editModal')">&#x2715;</button>
     <div class="modal-title" id="editModalTitle">Detalhes da ferramenta</div>
     <div class="modal-photo" id="editModalPhoto"></div>
     <div id="readonlyBanner" class="readonly-banner" style="display:none">Modo de visualização — desbloqueie o modo edição para alterar</div>
-
     <div class="modal-label">Categoria</div>
     <input type="text" id="editCategoria" disabled>
-
     <div class="modal-label">Código (patrimônio)</div>
     <input type="text" id="editCodigo" placeholder="Ex: 0001">
-
     <div class="modal-label">Descrição</div>
     <textarea id="editDescricao" placeholder="Descrição da ferramenta"></textarea>
-
     <div class="modal-label">Quantidade</div>
     <input type="number" id="editQuantidade" min="0" step="1">
-
     <label class="check-row">
       <input type="checkbox" id="editConforme">
       <span>Conforme (ok na última conferência)</span>
     </label>
-
     <div class="modal-label">Observação</div>
     <textarea id="editObservacao" placeholder="Observações sobre o item (opcional)"></textarea>
-
     <button class="modal-btn primary" id="saveBtn" onclick="saveTool()">Salvar alterações</button>
     <button class="modal-btn red" id="deleteBtn" onclick="confirmDeleteTool()" style="display:none">Excluir ferramenta</button>
   </div>
@@ -163,21 +215,16 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
 <div class="modal-overlay" id="addModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    <button class="modal-close" onclick="closeModal('addModal')">&#x2715;</button>
     <div class="modal-title">Adicionar ferramenta</div>
-
     <div class="modal-label">Categoria</div>
     <select id="addCategoria"></select>
-
     <div class="modal-label">Código (patrimônio) — opcional</div>
     <input type="text" id="addCodigo" placeholder="Ex: 0003">
-
     <div class="modal-label">Descrição</div>
     <textarea id="addDescricao" placeholder="Descrição da ferramenta"></textarea>
-
     <div class="modal-label">Quantidade</div>
     <input type="number" id="addQuantidade" min="0" step="1" value="1">
-
     <button class="modal-btn primary" onclick="createTool()">Adicionar</button>
   </div>
 </div>
@@ -191,6 +238,50 @@ let adminUnlocked = false;
 let allTools = [];
 let activeCategory = '';
 let currentEditId = null;
+
+// ── SCROLL HIDE/SHOW NAV ──
+(function() {
+  let lastY = 0;
+  const nav = document.getElementById('bottomNav');
+  const main = document.querySelector('.main');
+  main.addEventListener('scroll', () => {
+    const y = main.scrollTop;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+})();
+
+// ── PWD MODAL ──
+let _pwdCb = null;
+function openPwdModal(cb) {
+  _pwdCb = cb;
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('pwdError').style.display = 'none';
+  document.getElementById('pwdOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('pwdInput').focus(), 150);
+}
+function cancelPwd() {
+  document.getElementById('pwdOverlay').classList.remove('show');
+  _pwdCb = null;
+}
+function confirmPwd() {
+  if (document.getElementById('pwdInput').value === ADMIN_PASSWORD) {
+    document.getElementById('pwdOverlay').classList.remove('show');
+    document.getElementById('pwdError').style.display = 'none';
+    if (_pwdCb) { _pwdCb(); _pwdCb = null; }
+  } else {
+    document.getElementById('pwdError').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+    document.getElementById('pwdInput').focus();
+  }
+}
 
 async function api(method, path, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
@@ -220,23 +311,22 @@ function toggleAdmin() {
     toast('Modo visualização ativado', 'warn');
     return;
   }
-  const pwd = prompt('Digite a senha do administrador:');
-  if (pwd === null) return;
-  if (pwd !== ADMIN_PASSWORD) { toast('Senha incorreta', 'error'); return; }
-  adminUnlocked = true;
-  updateAdminUI();
-  toast('Modo edição ativado', 'success');
+  openPwdModal(() => {
+    adminUnlocked = true;
+    updateAdminUI();
+    toast('Modo edição ativado', 'success');
+  });
 }
 
 function updateAdminUI() {
   const pill = document.getElementById('modePill');
   const fab = document.getElementById('fabAdd');
   if (adminUnlocked) {
-    pill.textContent = '🔓 Editando';
+    pill.textContent = '\u{1F513} Editando';
     pill.classList.add('unlocked');
     fab.style.display = 'flex';
   } else {
-    pill.textContent = '🔒 Visualizar';
+    pill.textContent = '\u{1F512} Visualizar';
     pill.classList.remove('unlocked');
     fab.style.display = 'none';
   }
@@ -264,7 +354,6 @@ function buildCategoryChips() {
     chip.onclick = () => { activeCategory = cat; buildCategoryChips(); renderList(); };
     scroll.appendChild(chip);
   });
-
   const addSelect = document.getElementById('addCategoria');
   addSelect.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
 }
@@ -292,22 +381,12 @@ function renderList() {
     );
   }
   updateSummary(filtered);
-
   const area = document.getElementById('listArea');
-  if (!filtered.length) {
-    area.innerHTML = '<div class="empty-state">Nenhuma ferramenta encontrada</div>';
-    return;
-  }
-
+  if (!filtered.length) { area.innerHTML = '<div class="empty-state">Nenhuma ferramenta encontrada</div>'; return; }
   const groups = {};
-  filtered.forEach(t => {
-    if (!groups[t.categoria]) groups[t.categoria] = [];
-    groups[t.categoria].push(t);
-  });
+  filtered.forEach(t => { if (!groups[t.categoria]) groups[t.categoria] = []; groups[t.categoria].push(t); });
   const groupNames = Object.keys(groups).sort((a, b) => categoryOrder(a) - categoryOrder(b));
-
   const photoPlaceholderSvg = '<svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v10h14V7H5zm2 8l3-3.5 2 2L15 9l4 6H7z"/></svg>';
-
   area.innerHTML = groupNames.map(name => {
     const items = groups[name];
     const cards = items.map(t => {
@@ -315,36 +394,27 @@ function renderList() {
       if (t.conforme === true) flagClass = 'ok';
       else if (t.conforme === false) flagClass = 'bad';
       const thumb = t.foto_url
-        ? `<img src="${escapeHtml(t.foto_url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='${photoPlaceholderSvg.replace(/'/g, "\\'")}'">`
+        ? `<img src="${escapeHtml(t.foto_url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='${photoPlaceholderSvg.replace(/'/g, "\'")}'">` 
         : photoPlaceholderSvg;
-      return `
-        <div class="tool-card" onclick="openEditModal(${t.id})">
-          <div class="tool-row">
-            <div class="tool-main">
-              <div class="tool-thumb">${thumb}</div>
-              <div style="flex:1;min-width:0">
-                <div class="tool-desc">${escapeHtml(t.descricao)}</div>
-                <div class="tool-meta">
-                  ${t.codigo ? `<span class="tool-codigo">#${escapeHtml(t.codigo)}</span>` : '<span class="tool-codigo">sem código</span>'}
-                </div>
-                ${t.observacao ? `<div class="tool-obs">Obs: ${escapeHtml(t.observacao)}</div>` : ''}
-              </div>
+      return `<div class="tool-card" onclick="openEditModal(${t.id})">
+        <div class="tool-row">
+          <div class="tool-main">
+            <div class="tool-thumb">${thumb}</div>
+            <div style="flex:1;min-width:0">
+              <div class="tool-desc">${escapeHtml(t.descricao)}</div>
+              <div class="tool-meta">${t.codigo ? `<span class="tool-codigo">#${escapeHtml(t.codigo)}</span>` : '<span class="tool-codigo">sem código</span>'}</div>
+              ${t.observacao ? `<div class="tool-obs">Obs: ${escapeHtml(t.observacao)}</div>` : ''}
             </div>
-            <div class="tool-flags">
-              <div class="flag-dot ${flagClass}"></div>
-            </div>
-            <div class="tool-qty">${t.quantidade}x</div>
           </div>
-        </div>`;
-    }).join('');
-    return `
-      <div class="group-block">
-        <div class="group-title">
-          <div class="group-name">${escapeHtml(name)}</div>
-          <div class="group-count">${items.length} itens</div>
+          <div class="tool-flags"><div class="flag-dot ${flagClass}"></div></div>
+          <div class="tool-qty">${t.quantidade}x</div>
         </div>
-        ${cards}
       </div>`;
+    }).join('');
+    return `<div class="group-block">
+      <div class="group-title"><div class="group-name">${escapeHtml(name)}</div><div class="group-count">${items.length} itens</div></div>
+      ${cards}
+    </div>`;
   }).join('');
 }
 
@@ -356,7 +426,7 @@ function openEditModal(id) {
   const photoPlaceholderSvg = '<svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v10h14V7H5zm2 8l3-3.5 2 2L15 9l4 6H7z"/></svg>';
   const photoEl = document.getElementById('editModalPhoto');
   photoEl.innerHTML = t.foto_url
-    ? `<img src="${escapeHtml(t.foto_url)}" alt="" onerror="this.parentElement.innerHTML='${photoPlaceholderSvg.replace(/'/g, "\\'")}'">`
+    ? `<img src="${escapeHtml(t.foto_url)}" alt="" onerror="this.parentElement.innerHTML='${photoPlaceholderSvg.replace(/'/g, "\'")}'">`
     : photoPlaceholderSvg;
   document.getElementById('editCategoria').value = t.categoria;
   document.getElementById('editCodigo').value = t.codigo || '';
@@ -364,13 +434,11 @@ function openEditModal(id) {
   document.getElementById('editQuantidade').value = t.quantidade;
   document.getElementById('editConforme').checked = t.conforme === true;
   document.getElementById('editObservacao').value = t.observacao || '';
-
   const fields = ['editCodigo', 'editDescricao', 'editQuantidade', 'editConforme', 'editObservacao'];
   fields.forEach(f => document.getElementById(f).disabled = !adminUnlocked);
   document.getElementById('readonlyBanner').style.display = adminUnlocked ? 'none' : 'block';
   document.getElementById('saveBtn').style.display = adminUnlocked ? 'block' : 'none';
   document.getElementById('deleteBtn').style.display = adminUnlocked ? 'block' : 'none';
-
   openModal('editModal');
 }
 
@@ -381,24 +449,14 @@ async function saveTool() {
   const quantidade = parseInt(document.getElementById('editQuantidade').value, 10);
   const conforme = document.getElementById('editConforme').checked;
   const observacao = document.getElementById('editObservacao').value.trim();
-
   if (!descricao) { toast('Descrição é obrigatória', 'error'); return; }
   if (isNaN(quantidade) || quantidade < 0) { toast('Quantidade inválida', 'error'); return; }
-
   try {
-    await api('PATCH', `ferramentas?id=eq.${currentEditId}`, {
-      codigo: codigo || null,
-      descricao,
-      quantidade,
-      conforme,
-      observacao: observacao || null
-    });
+    await api('PATCH', `ferramentas?id=eq.${currentEditId}`, { codigo: codigo || null, descricao, quantidade, conforme, observacao: observacao || null });
     toast('Ferramenta atualizada', 'success');
     closeModal('editModal');
     await loadTools();
-  } catch (e) {
-    toast('Erro ao salvar', 'error');
-  }
+  } catch (e) { toast('Erro ao salvar', 'error'); }
 }
 
 function confirmDeleteTool() {
@@ -412,12 +470,10 @@ function confirmDeleteTool() {
 async function deleteTool(id) {
   try {
     await api('DELETE', `ferramentas?id=eq.${id}`);
-    toast('Ferramenta excluída', 'success');
+    toast('Ferramenta exluída', 'success');
     closeModal('editModal');
     await loadTools();
-  } catch (e) {
-    toast('Erro ao excluir', 'error');
-  }
+  } catch (e) { toast('Erro ao excluir', 'error'); }
 }
 
 function openAddModal() {
@@ -434,26 +490,15 @@ async function createTool() {
   const codigo = document.getElementById('addCodigo').value.trim();
   const descricao = document.getElementById('addDescricao').value.trim();
   const quantidade = parseInt(document.getElementById('addQuantidade').value, 10);
-
   if (!categoria) { toast('Selecione uma categoria', 'error'); return; }
   if (!descricao) { toast('Descrição é obrigatória', 'error'); return; }
   if (isNaN(quantidade) || quantidade < 0) { toast('Quantidade inválida', 'error'); return; }
-
   try {
-    await api('POST', 'ferramentas', {
-      categoria,
-      codigo: codigo || null,
-      descricao,
-      quantidade,
-      conforme: null,
-      observacao: null
-    });
+    await api('POST', 'ferramentas', { categoria, codigo: codigo || null, descricao, quantidade, conforme: null, observacao: null });
     toast('Ferramenta adicionada', 'success');
     closeModal('addModal');
     await loadTools();
-  } catch (e) {
-    toast('Erro ao adicionar', 'error');
-  }
+  } catch (e) { toast('Erro ao adicionar', 'error'); }
 }
 
 async function loadTools() {
