@@ -39,7 +39,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .mode-pill.supervisor { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
 
 /* ── MAIN ── */
-.main { max-width: 480px; margin: 0 auto; padding: 20px 16px 48px; }
+.main { max-width: 480px; margin: 0 auto; padding: 20px 16px 88px; }
 
 /* ── SCREEN: SELECT EMPLOYEE ── */
 .screen { display: none; }
@@ -225,6 +225,48 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
 /* ── LOADING ── */
 .loading { text-align: center; color: var(--text3); padding: 32px; font-size: 14px; }
+
+/* ── BOTTOM NAV + PWD MODAL ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 40; transition: transform .3s ease;
+}
+.bottom-nav.hidden { transform: translateY(100%); }
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 16px; cursor: pointer; text-decoration: none; color: var(--text3);
+  font-size: 10px; font-weight: 500; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+.nav-item.active { color: var(--accent); }
+.nav-item:active { transform: scale(0.95); }
+.pwd-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.pwd-overlay.show { opacity: 1; pointer-events: all; }
+.pwd-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px; width: 320px; max-width: 90vw;
+}
+.pwd-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.pwd-sub { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+.pwd-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px;
+  color: var(--text); font-family: 'DM Mono', monospace; margin-bottom: 12px; letter-spacing: 3px;
+}
+.pwd-input:focus { outline: none; border-color: var(--accent); }
+.pwd-error { font-size: 12px; color: var(--red); margin-bottom: 10px; display: none; }
+.pwd-btns { display: flex; gap: 10px; }
+.pwd-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.pwd-btn.cancel { background: var(--surface2); color: var(--text2); }
+.pwd-btn.confirm { background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -471,10 +513,69 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 </div>
 
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottomNav">
+  <a class="nav-item" href="menu.html"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Menu</a>
+  <a class="nav-item" href="index.html"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>Ponto</a>
+  <a class="nav-item" href="ferramentas.html"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Ferramentas</a>
+  <a class="nav-item active" href="perfil.html"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>Perfil</a>
+</nav>
+
+<!-- PWD MODAL -->
+<div class="pwd-overlay" id="pwdOverlay">
+  <div class="pwd-box">
+    <div class="pwd-title">🔒 Modo Supervisor</div>
+    <div class="pwd-sub">Digite a senha para continuar</div>
+    <input class="pwd-input" type="password" id="pwdInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') confirmPwd()">
+    <div class="pwd-error" id="pwdError">Senha incorreta. Tente novamente.</div>
+    <div class="pwd-btns">
+      <button class="pwd-btn cancel" onclick="cancelPwd()">Cancelar</button>
+      <button class="pwd-btn confirm" onclick="confirmPwd()">Entrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicafhydro2026!';
+
+// ── SCROLL HIDE/SHOW NAV ──
+(function() {
+  let lastY = 0;
+  const nav = document.getElementById('bottomNav');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+})();
+
+// ── PWD MODAL ──
+let _pwdCb = null;
+function openPwdModal(cb) {
+  _pwdCb = cb;
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('pwdError').style.display = 'none';
+  document.getElementById('pwdOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('pwdInput').focus(), 150);
+}
+function cancelPwd() {
+  document.getElementById('pwdOverlay').classList.remove('show');
+  _pwdCb = null;
+}
+function confirmPwd() {
+  if (document.getElementById('pwdInput').value === ADMIN_PASSWORD) {
+    document.getElementById('pwdOverlay').classList.remove('show');
+    document.getElementById('pwdError').style.display = 'none';
+    if (_pwdCb) { _pwdCb(); _pwdCb = null; }
+  } else {
+    document.getElementById('pwdError').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+    document.getElementById('pwdInput').focus();
+  }
+}
 
 // Supervisors who get full edit access
 const SUPERVISORS = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Tami Pacheco'];
@@ -560,17 +661,15 @@ function toggleSupervisor() {
     goBack();
     return;
   }
-  const pwd = prompt('Digite a senha do supervisor:');
-  if (pwd === null) return;
-  if (pwd !== ADMIN_PASSWORD) { toast('Senha incorreta', 'error'); return; }
-  isSupervisor = true;
-  document.getElementById('modePill').textContent = '🔓 Supervisor';
-  document.getElementById('modePill').classList.add('supervisor');
-  document.getElementById('selectLabel').textContent = 'Selecione um funcionário';
-  toast('Modo supervisor ativado', 'success');
-  // Rebuild grid (same, but now clicking any name works)
-  buildEmpGrid();
-  if (currentEmployee) openProfile(currentEmployee); // refresh edit buttons
+  openPwdModal(() => {
+    isSupervisor = true;
+    document.getElementById('modePill').textContent = '🔓 Supervisor';
+    document.getElementById('modePill').classList.add('supervisor');
+    document.getElementById('selectLabel').textContent = 'Selecione um funcionário';
+    toast('Modo supervisor ativado', 'success');
+    buildEmpGrid();
+    if (currentEmployee) openProfile(currentEmployee);
+  });
 }
 
 // ── EMPLOYEE GRID ──
