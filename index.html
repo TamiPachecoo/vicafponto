@@ -195,6 +195,50 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .pwd-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
 .pwd-btn.cancel { background: var(--surface2); color: var(--text2); }
 .pwd-btn.confirm { background: var(--accent); color: #fff; }
+
+/* ── PIN MODAL ── */
+.pin-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 600; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.pin-overlay.show { opacity: 1; pointer-events: all; }
+.pin-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px 24px; width: 320px; max-width: 92vw;
+  text-align: center;
+}
+.pin-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.pin-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.pin-subtitle { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+.pin-dots { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
+.pin-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border); background: transparent;
+  transition: all .15s;
+}
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pin-dot.error { background: var(--red); border-color: var(--red); }
+.pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.pin-key {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 16px 0; font-size: 20px; font-weight: 500;
+  cursor: pointer; color: var(--text); transition: all .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-key:active { transform: scale(0.93); background: var(--accent-dim); border-color: var(--accent); }
+.pin-key.del { font-size: 16px; color: var(--text2); }
+.pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
+.pin-error { font-size: 12px; color: var(--red); min-height: 18px; margin-bottom: 8px; }
+.pin-locked { font-size: 13px; color: var(--amber); margin-bottom: 8px; }
+.pin-cancel { font-size: 12px; color: var(--text3); cursor: pointer; padding: 8px; }
+.pin-cancel:hover { color: var(--text2); }
 </style>
 </head>
 <body>
@@ -296,6 +340,37 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
 <div class="toast" id="toast"></div>
 
+<!-- PIN MODAL -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <div class="pin-avatar" id="pinAvatar"></div>
+    <div class="pin-name" id="pinName"></div>
+    <div class="pin-subtitle" id="pinSubtitle">Digite seu PIN</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-keypad" id="pinKeypad">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key del" onclick="pinBackspace()">⌫</div>
+    </div>
+    <div class="pin-cancel" onclick="closePinModal()">Cancelar</div>
+  </div>
+</div>
+
 <!-- PASSWORD MODAL (replaces prompt() for PWA compatibility) -->
 <div class="pwd-overlay" id="pwdOverlay">
   <div class="pwd-box">
@@ -363,7 +438,7 @@ const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicafhydro2026!';
 
-let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {};
+let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {}, employeePins = {};
 let pendingCorrections = [], currentCorrectionId = null;
 let editDayContext = null;
 let editDayRows = [];
@@ -449,9 +524,10 @@ function initials(name) { return name.split(' ').map(w=>w[0]).join('').substring
 
 async function loadEmployees() {
   try {
-    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
+    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
     EMPLOYEES = rows.map(r => r.full_name);
     rows.forEach(r => {
+      employeePins[r.full_name] = r.pin || null;
       hourlyRates[r.full_name] = {
         regular: r.regular_hourly_rate||0, overtime: r.overtime_rate||0,
         weekend: r.weekend_rate||0, saturday: r.saturday_rate||0,
@@ -491,11 +567,13 @@ async function loadTodayStatus() {
   } catch(e) { console.error(e); }
 }
 
-async function loadTodayLog() {
+async function loadTodayLog(empFilter) {
   const today = getLocalDate();
   const logEl = document.getElementById('todayLog');
   try {
-    const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`);
+    let query = `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`;
+    if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
+    const rows = await api('GET', query);
     if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
     logEl.innerHTML = '<div class="log-list">' + rows.map(r => {
       const t = parseTS(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
@@ -516,14 +594,206 @@ async function loadTodayLog() {
 }
 
 function selectEmp(name) {
+  // Check lockout first
+  openPinModal(name);
+}
+
+// ── PIN MODAL LOGIC ──
+let pinBuffer = '';
+let pinMode = 'verify'; // 'verify' | 'create' | 'confirm'
+let pinCreateFirst = '';
+let pinTargetEmp = '';
+
+function openPinModal(name) {
+  pinTargetEmp = name;
+  pinBuffer = '';
+  pinCreateFirst = '';
+  document.getElementById('pinAvatar').textContent = initials(name);
+  document.getElementById('pinName').textContent = name;
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('pinOverlay').classList.add('show');
+
+  const hasPin = !!employeePins[name];
+  if (hasPin) {
+    pinMode = 'verify';
+    document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
+    checkLockout(name);
+  } else {
+    pinMode = 'create';
+    document.getElementById('pinSubtitle').innerHTML = 'Primeiro acesso! Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+    enableKeypad(true);
+  }
+  updatePinDots();
+}
+
+function closePinModal() {
+  document.getElementById('pinOverlay').classList.remove('show');
+  pinBuffer = '';
+  pinCreateFirst = '';
+  pinTargetEmp = '';
+}
+
+async function checkLockout(name) {
+  try {
+    const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    }).then(r => r.json());
+
+    const row = rows[0];
+    if (row && row.locked_until) {
+      const until = new Date(row.locked_until);
+      const now = new Date();
+      if (until > now) {
+        const mins = Math.ceil((until - now) / 60000);
+        document.getElementById('pinError').textContent = `🔒 Bloqueado por mais ${mins} min`;
+        enableKeypad(false);
+        return;
+      }
+    }
+    enableKeypad(true);
+  } catch(e) {
+    enableKeypad(true);
+  }
+}
+
+function enableKeypad(enabled) {
+  document.getElementById('pinKeypad').style.opacity = enabled ? '1' : '0.3';
+  document.getElementById('pinKeypad').style.pointerEvents = enabled ? '' : 'none';
+}
+
+function pinKey(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(() => handlePinComplete(), 120);
+  }
+}
+
+function pinBackspace() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(state = 'normal') {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.className = 'pin-dot';
+    if (state === 'error') dot.classList.add('error');
+    else if (i < pinBuffer.length) dot.classList.add('filled');
+  }
+}
+
+async function handlePinComplete() {
+  if (pinMode === 'create') {
+    pinCreateFirst = pinBuffer;
+    pinBuffer = '';
+    pinMode = 'confirm';
+    document.getElementById('pinSubtitle').innerHTML = 'Digite o PIN novamente para confirmar';
+    document.getElementById('pinError').textContent = '';
+    updatePinDots();
+
+  } else if (pinMode === 'confirm') {
+    if (pinBuffer !== pinCreateFirst) {
+      document.getElementById('pinError').textContent = 'Os PINs não coincidem. Comece novamente.';
+      updatePinDots('error');
+      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 800);
+      pinMode = 'create';
+      pinCreateFirst = '';
+      document.getElementById('pinSubtitle').innerHTML = 'Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+      return;
+    }
+    // Save PIN
+    await savePinToSupabase(pinTargetEmp, pinBuffer);
+
+  } else if (pinMode === 'verify') {
+    await verifyPin(pinTargetEmp, pinBuffer);
+  }
+}
+
+async function savePinToSupabase(name, pin) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ pin })
+    });
+    employeePins[name] = pin;
+    toast('PIN criado com sucesso!', 'success');
+    closePinModal();
+    unlockEmployee(name);
+  } catch(e) {
+    toast('Erro ao salvar PIN', 'error');
+    pinBuffer = '';
+    updatePinDots();
+  }
+}
+
+async function verifyPin(name, entered) {
+  if (entered === employeePins[name]) {
+    // Clear lockout
+    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    }).catch(() => {});
+    closePinModal();
+    unlockEmployee(name);
+  } else {
+    // Wrong PIN
+    updatePinDots('error');
+    await registerFailedAttempt(name);
+    setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
+  }
+}
+
+async function registerFailedAttempt(name) {
+  try {
+    // Get current record
+    const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    }).then(r => r.json());
+
+    const current = rows[0];
+    const attempts = (current?.failed_attempts || 0) + 1;
+
+    if (attempts >= 3) {
+      const lockedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      await upsertLockout(name, attempts, lockedUntil);
+      const mins = 5;
+      document.getElementById('pinError').textContent = `🔒 Bloqueado por ${mins} minutos`;
+      enableKeypad(false);
+    } else {
+      await upsertLockout(name, attempts, null);
+      document.getElementById('pinError').textContent = `PIN incorreto — tentativa ${attempts}/3`;
+    }
+  } catch(e) {
+    document.getElementById('pinError').textContent = 'PIN incorreto';
+  }
+}
+
+async function upsertLockout(name, attempts, lockedUntil) {
+  await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify({ employee_name: name, failed_attempts: attempts, locked_until: lockedUntil })
+  });
+}
+
+function unlockEmployee(name) {
   selectedEmp = name;
   document.querySelectorAll('.emp-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('emp-' + name.replace(/\s/g,'_')).classList.add('selected');
+  const btn = document.getElementById('emp-' + name.replace(/\s/g,'_'));
+  if (btn) btn.classList.add('selected');
   updatePunchBtn();
   document.getElementById('statusCard').style.display = 'block';
   document.getElementById('notesArea').style.display = 'block';
   document.getElementById('actionRow').style.display = 'flex';
   loadTodayNote(name);
+  loadTodayLog(name);
 }
 
 async function loadTodayNote(emp) {
@@ -1150,8 +1420,8 @@ async function init() {
   buildEmpGrid();
   setDefaultDates();
   await loadTodayStatus();
-  await loadTodayLog();
-  setInterval(loadTodayLog, 30000);
+  await loadTodayLog(); // no filter on startup — shows empty state until PIN entered
+  setInterval(() => { if (selectedEmp) loadTodayLog(selectedEmp); }, 30000);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
