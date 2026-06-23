@@ -3,154 +3,259 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Vicaf Hydro — Ponto</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1117">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vicaf Hydro">
-<link rel="apple-touch-icon" href="icon-192.png">
+<title>Vicaf Hydro — Perfil</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
-  --accent: #3b82f6; --accent-dim: #1d3a6b; --green: #22c55e; --green-dim: #14532d;
-  --red: #ef4444; --red-dim: #7f1d1d; --amber: #f59e0b; --amber-dim: #451a03;
-  --text: #f1f5f9; --text2: #94a3b8; --text3: #475569; --radius: 16px; --radius-sm: 10px;
+  --accent: #3b82f6; --accent-dim: #1d3a6b;
+  --green: #22c55e; --green-dim: #14532d;
+  --red: #ef4444; --red-dim: #7f1d1d;
+  --amber: #f59e0b; --amber-dim: #451a03;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #475569;
+  --radius: 16px; --radius-sm: 10px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
-body { display: flex; flex-direction: column; min-height: 100vh; }
-.header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+
+/* ── HEADER ── */
+.header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
 .logo { display: flex; align-items: center; gap: 10px; }
 .logo-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; }
 .logo-icon svg { width: 20px; height: 20px; fill: var(--accent); }
 .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
 .logo-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
-.clock-display { text-align: right; font-family: 'DM Mono', monospace; }
-.clock-time { font-size: 18px; font-weight: 500; letter-spacing: 1px; }
-.clock-date { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
-.tab { flex: 1; padding: 13px 0; font-size: 13px; font-weight: 500; color: var(--text3); text-align: center; cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; position: relative; }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-badge { position: absolute; top: 6px; right: 20%; background: var(--red); color: #fff; border-radius: 10px; font-size: 10px; font-weight: 700; padding: 1px 5px; min-width: 16px; text-align: center; }
-.main { flex: 1; overflow-y: auto; padding: 20px 16px 100px; max-width: 480px; margin: 0 auto; width: 100%; }
+.mode-pill {
+  font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 20px;
+  cursor: pointer; user-select: none; transition: all .2s;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text2);
+}
+.mode-pill.supervisor { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+
+/* ── MAIN ── */
+.main { max-width: 480px; margin: 0 auto; padding: 20px 16px 88px; }
+
+/* ── SCREEN: SELECT EMPLOYEE ── */
 .screen { display: none; }
 .screen.active { display: block; }
-.section-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .8px; color: var(--text3); margin-bottom: 10px; }
-.emp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
-.emp-btn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all .2s; text-align: left; }
-.emp-btn:active { transform: scale(0.97); }
-.emp-btn.selected { border-color: var(--accent); background: var(--accent-dim); }
-.emp-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; color: var(--text2); }
-.emp-btn.selected .emp-avatar { background: var(--accent); color: #fff; }
-.emp-name { font-size: 13px; font-weight: 500; color: var(--text); }
-.emp-status { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.emp-btn.selected .emp-status { color: #93c5fd; }
-.status-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 20px; }
-.status-row { display: flex; align-items: center; justify-content: space-between; }
-.status-label { font-size: 12px; color: var(--text2); }
-.status-val { font-size: 14px; font-weight: 500; font-family: 'DM Mono', monospace; }
-.status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-.badge-in { background: var(--green-dim); color: var(--green); }
-.badge-out { background: var(--red-dim); color: var(--red); }
-.badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.punch-wrap { display: flex; flex-direction: column; align-items: center; margin: 8px 0 20px; }
-.punch-btn { width: 140px; height: 140px; border-radius: 50%; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; transition: transform .15s, box-shadow .15s; position: relative; overflow: hidden; }
-.punch-btn::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(255,255,255,0.08); opacity: 0; transition: opacity .15s; }
-.punch-btn:active { transform: scale(0.94); }
-.punch-btn:active::after { opacity: 1; }
-.punch-btn.in { background: var(--green); color: #fff; box-shadow: 0 0 40px rgba(34,197,94,.25); }
-.punch-btn.out { background: var(--red); color: #fff; box-shadow: 0 0 40px rgba(239,68,68,.25); }
-.punch-btn.disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; box-shadow: none; }
-.punch-btn svg { width: 32px; height: 32px; }
-.punch-hint { font-size: 12px; color: var(--text3); margin-top: 12px; text-align: center; }
-.notes-area { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; }
-.notes-area textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif; resize: none; min-height: 72px; margin-top: 8px; }
-.notes-area textarea::placeholder { color: var(--text3); }
-.notes-area textarea:focus { outline: none; border-color: var(--accent); }
-.action-row { display: flex; gap: 10px; margin-bottom: 24px; }
-.action-btn { flex: 1; padding: 11px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; text-align: center; transition: all .2s; font-family: 'DM Sans', sans-serif; }
-.action-btn.amber { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
-.action-btn.blue { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-.log-list { display: flex; flex-direction: column; gap: 8px; }
-.log-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
-.log-item-row { display: flex; align-items: center; justify-content: space-between; }
-.log-left { display: flex; align-items: center; gap: 10px; }
-.log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.log-dot.in { background: var(--green); }
-.log-dot.out { background: var(--red); }
-.log-dot.corrected { background: var(--amber); }
-.log-type { font-size: 13px; font-weight: 500; }
-.log-emp { font-size: 11px; color: var(--text2); margin-top: 1px; }
-.log-time { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text2); }
-.log-note { font-size: 11px; color: var(--text3); margin-top: 6px; padding-left: 18px; font-style: italic; }
-.log-corrected-badge { font-size: 10px; color: var(--amber); background: var(--amber-dim); border-radius: 6px; padding: 2px 6px; margin-left: 6px; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s; }
-.modal-overlay.show { opacity: 1; pointer-events: all; }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px 32px; width: 100%; max-width: 480px; transform: translateY(100%); transition: transform .3s cubic-bezier(.34,1.2,.64,1); }
-.modal-overlay.show .modal { transform: translateY(0); }
-.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
-.modal-close { float: right; background: var(--surface2); border: none; color: var(--text2); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; }
-.modal input, .modal textarea, .modal select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif; margin-bottom: 12px; }
-.modal input:focus, .modal textarea:focus, .modal select:focus { outline: none; border-color: var(--accent); }
-.modal textarea { resize: none; min-height: 80px; }
+
+.section-label {
+  font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text3); margin-bottom: 12px;
+}
+
+.emp-grid { display: flex; flex-direction: column; gap: 8px; }
+.emp-btn {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  cursor: pointer; transition: border-color .15s; text-align: left; width: 100%;
+  color: var(--text);
+}
+.emp-btn:active { transform: scale(0.99); }
+.emp-btn:hover { border-color: var(--accent); }
+.emp-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.emp-name { font-size: 15px; font-weight: 500; }
+.emp-cargo { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* ── BACK BUTTON ── */
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--text2);
+  font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 18px;
+  font-family: 'DM Sans', sans-serif;
+}
+.back-btn svg { width: 16px; height: 16px; fill: var(--text2); }
+.back-btn:hover { color: var(--text); }
+
+/* ── PROFILE CARD ── */
+.profile-header {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+}
+.profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 22px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.profile-name { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.profile-cargo { font-size: 13px; color: var(--text2); margin-top: 3px; }
+.profile-admissao { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+/* ── SECTIONS ── */
+.section-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+.section-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.section-title span { font-size: 16px; }
+
+.info-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 14px; }
+.info-row:last-child { margin-bottom: 0; }
+.info-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--text3); font-weight: 500; }
+.info-value { font-size: 14px; color: var(--text); }
+.info-value.empty { color: var(--text3); font-style: italic; font-size: 13px; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ── STATUS BADGE (exames/NRs) ── */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 6px; white-space: nowrap;
+}
+.badge-ok    { background: var(--green-dim); color: var(--green); }
+.badge-warn  { background: var(--amber-dim); color: var(--amber); }
+.badge-expired { background: var(--red-dim); color: var(--red); }
+.badge-none  { background: var(--surface2); color: var(--text3); }
+
+/* ── DOC ITEMS ── */
+.doc-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.doc-item:last-child { border-bottom: none; padding-bottom: 0; }
+.doc-item:first-child { padding-top: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.doc-dates { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.doc-obs { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+.empty-docs {
+  text-align: center; padding: 20px 0;
+  color: var(--text3); font-size: 13px; font-style: italic;
+}
+
+/* ── EDIT BUTTONS ── */
+.edit-section-btn {
+  display: block; width: 100%; margin-top: 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px;
+  color: var(--text2); font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; text-align: center;
+}
+.edit-section-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.add-doc-btn {
+  display: block; width: 100%; margin-top: 12px;
+  background: none; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 10px;
+  color: var(--text3); font-size: 12px;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; text-align: center;
+}
+.add-doc-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 100;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 24px 20px 32px; width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); width: 30px; height: 30px;
+  border-radius: 50%; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-wrap { position: relative; }
+.modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; padding-right: 36px; }
+.modal-label { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--text3); font-weight: 500; margin-bottom: 6px; margin-top: 14px; }
+.modal-label:first-of-type { margin-top: 0; }
+.modal input, .modal textarea, .modal select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px;
+  font-size: 14px; color: var(--text); font-family: 'DM Sans', sans-serif;
+}
+.modal input:focus, .modal textarea:focus, .modal select:focus {
+  outline: none; border-color: var(--accent);
+}
+.modal textarea { resize: vertical; min-height: 72px; }
 .modal select option { background: var(--surface2); }
-.modal-label { font-size: 11px; color: var(--text3); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .6px; }
-.modal-btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); border: none; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 4px; }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-btn {
+  display: block; width: 100%; margin-top: 18px;
+  padding: 13px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; border: none; transition: opacity .15s;
+}
+.modal-btn:active { opacity: .8; }
 .modal-btn.primary { background: var(--accent); color: #fff; }
-.modal-btn.amber { background: var(--amber); color: #000; }
-.modal-btn.green { background: var(--green); color: #fff; }
-.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 300; transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; color: var(--text); }
+.modal-btn.danger  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); margin-top: 10px; }
+
+.modal-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 11px 20px; border-radius: 24px;
+  font-size: 13px; font-weight: 500; z-index: 200;
+  transition: transform .25s; pointer-events: none; white-space: nowrap;
+}
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { border-color: var(--green); color: var(--green); }
-.toast.error { border-color: var(--red); color: var(--red); }
-.toast.warn { border-color: var(--amber); color: var(--amber); }
-.filter-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.filter-row input, .filter-row select { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif; flex: 1; min-width: 120px; }
-.filter-row button { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-.request-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; }
-.request-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.request-type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
-.request-type.correction { color: var(--amber); }
-.request-type.medical { color: var(--accent); }
-.request-body { padding: 12px 16px; }
-.request-emp { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-.request-detail { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
-.request-note { font-size: 12px; color: var(--text3); font-style: italic; margin-bottom: 12px; }
-.request-actions { display: flex; gap: 8px; }
-.req-btn { flex: 1; padding: 9px; border-radius: var(--radius-sm); border: none; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-.req-btn.approve { background: var(--green-dim); color: var(--green); }
-.req-btn.dismiss { background: var(--surface2); color: var(--text3); }
-.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
-.summary-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .6px; }
-.summary-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.summary-row:last-child { border-bottom: none; }
-.sum-emp { font-size: 14px; font-weight: 500; }
-.sum-hours { font-size: 15px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--accent); }
-.sum-note { font-size: 11px; color: var(--text3); font-style: italic; margin-top: 3px; max-width: 180px; }
-.pay-card { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; }
-.pay-title { font-size: 12px; color: #93c5fd; margin-bottom: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; }
-.pay-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.pay-row:last-child { margin-bottom: 0; border-top: 1px solid rgba(59,130,246,.3); padding-top: 8px; margin-top: 4px; }
-.pay-name { font-size: 13px; color: #bfdbfe; }
-.pay-val { font-size: 13px; font-weight: 600; font-family: 'DM Mono', monospace; color: #fff; }
-.export-row { display: flex; gap: 10px; margin-bottom: 16px; }
-.export-btn { flex: 1; padding: 13px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all .2s; }
-.export-btn:hover { border-color: var(--accent); color: var(--accent); }
-.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
-.loading { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
-.edit-punch-row { display: flex; gap: 8px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; }
-.edit-punch-row select { flex: 0 0 100px; margin-bottom: 0; }
-.edit-punch-row input[type="time"] { flex: 1; margin-bottom: 0; }
-.edit-punch-row .ep-remove { background: var(--red-dim); color: var(--red); border: none; border-radius: 8px; width: 32px; height: 32px; flex-shrink: 0; cursor: pointer; font-size: 14px; }
-.edit-punch-row.deleted { opacity: 0.4; }
-.day-edit-trigger { font-size: 11px; color: var(--accent); cursor: pointer; margin-left: 6px; text-decoration: underline; }
-.summary-row-clickable { cursor: pointer; }
-.hours-breakdown { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
-.hours-chip { font-size: 10px; padding: 2px 7px; border-radius: 6px; background: var(--surface2); color: var(--text2); }
+.toast.error   { border-color: var(--red); color: var(--red); }
+.toast.warn    { border-color: var(--amber); color: var(--amber); }
 
-/* ── BOTTOM NAV ── */
+/* ── LOADING ── */
+.loading { text-align: center; color: var(--text3); padding: 32px; font-size: 14px; }
+
+/* ── COMPLIANCE OVERVIEW (supervisor) ── */
+.overview-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  margin-bottom: 10px; cursor: pointer; transition: border-color .15s;
+  display: flex; align-items: center; gap: 14px;
+}
+.overview-card:hover { border-color: var(--accent); }
+.overview-card:active { transform: scale(0.99); }
+.overview-avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.overview-info { flex: 1; min-width: 0; }
+.overview-name { font-size: 14px; font-weight: 600; }
+.overview-cargo { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.overview-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ov-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 6px; white-space: nowrap;
+}
+.ov-ok      { background: var(--green-dim); color: var(--green); }
+.ov-warn    { background: var(--amber-dim); color: var(--amber); }
+.ov-expired { background: var(--red-dim);   color: var(--red);   }
+.ov-none    { background: var(--surface2);  color: var(--text3); }
+.overview-arrow { color: var(--text3); font-size: 18px; flex-shrink: 0; }
+
+/* ── BOTTOM NAV + PWD MODAL ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--surface); border-top: 1px solid var(--border);
@@ -161,18 +266,15 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .bottom-nav.hidden { transform: translateY(100%); }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 6px 20px; border-radius: 12px; cursor: pointer;
-  text-decoration: none; color: var(--text3);
+  padding: 6px 16px; cursor: pointer; text-decoration: none; color: var(--text3);
   font-size: 10px; font-weight: 500; transition: color .15s;
   -webkit-tap-highlight-color: transparent;
 }
 .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
 .nav-item.active { color: var(--accent); }
 .nav-item:active { transform: scale(0.95); }
-
-/* ── PASSWORD MODAL (replaces prompt()) ── */
 .pwd-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
   display: flex; align-items: center; justify-content: center;
   z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s;
 }
@@ -186,8 +288,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .pwd-input {
   width: 100%; background: var(--surface2); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px;
-  color: var(--text); font-family: 'DM Mono', monospace; margin-bottom: 12px;
-  letter-spacing: 3px;
+  color: var(--text); font-family: 'DM Mono', monospace; margin-bottom: 12px; letter-spacing: 3px;
 }
 .pwd-input:focus { outline: none; border-color: var(--accent); }
 .pwd-error { font-size: 12px; color: var(--red); margin-bottom: 10px; display: none; }
@@ -195,78 +296,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .pwd-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
 .pwd-btn.cancel { background: var(--surface2); color: var(--text2); }
 .pwd-btn.confirm { background: var(--accent); color: #fff; }
-
-/* ── PIN MODAL ── */
-.pin-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.85);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 600; opacity: 0; pointer-events: none; transition: opacity .2s;
-}
-.pin-overlay.show { opacity: 1; pointer-events: all; }
-.pin-box {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 28px 24px 24px; width: 320px; max-width: 92vw;
-  text-align: center;
-}
-.pin-avatar {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: var(--accent-dim); color: var(--accent);
-  font-size: 18px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 12px;
-}
-.pin-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.pin-subtitle { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
-.pin-dots { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
-.pin-dot {
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid var(--border); background: transparent;
-  transition: all .15s;
-}
-.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
-.pin-dot.error { background: var(--red); border-color: var(--red); }
-.pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-.pin-key {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 16px 0; font-size: 20px; font-weight: 500;
-  cursor: pointer; color: var(--text); transition: all .1s;
-  -webkit-tap-highlight-color: transparent;
-}
-.pin-key:active { transform: scale(0.93); background: var(--accent-dim); border-color: var(--accent); }
-.pin-key.del { font-size: 16px; color: var(--text2); }
-.pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
-.pin-error { font-size: 12px; color: var(--red); min-height: 18px; margin-bottom: 8px; }
-.pin-locked { font-size: 13px; color: var(--amber); margin-bottom: 8px; }
-.pin-cancel { font-size: 12px; color: var(--text3); cursor: pointer; padding: 8px; }
-.pin-cancel:hover { color: var(--text2); }
-
-/* ── PIN MANAGEMENT (Resumo) ── */
-.pin-manage-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 12px 14px;
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; gap: 10px;
-}
-.pin-manage-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.pin-manage-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--surface2); color: var(--text2);
-  font-size: 12px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.pin-manage-name { font-size: 13px; font-weight: 500; }
-.pin-manage-status { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.pin-manage-status.has-pin { color: var(--green); }
-.pin-manage-status.no-pin { color: var(--amber); }
-.pin-manage-status.locked { color: var(--red); }
-.pin-reset-btn {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 7px 12px;
-  font-size: 11px; font-weight: 600; color: var(--text2);
-  cursor: pointer; font-family: 'DM Sans', sans-serif;
-  white-space: nowrap; transition: all .2s; flex-shrink: 0;
-}
-.pin-reset-btn:hover { border-color: var(--amber); color: var(--amber); }
 </style>
 </head>
 <body>
@@ -274,145 +303,265 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 <div class="header">
   <div class="logo">
     <div class="logo-icon">
-      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
     </div>
     <div>
       <div class="logo-text">Vicaf Hydro</div>
-      <div class="logo-sub">Controle de Ponto</div>
+      <div class="logo-sub">Perfil do Funcionário</div>
     </div>
   </div>
-  <div class="clock-display">
-    <div class="clock-time" id="clockTime">--:--:--</div>
-    <div class="clock-date" id="clockDate"></div>
-  </div>
-</div>
-
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('punch')">Bater Ponto</div>
-  <div class="tab" onclick="switchTab('admin')" id="tabAdmin">
-    Resumo
-    <span class="tab-badge" id="pendingBadge" style="display:none">0</span>
-  </div>
+  <div class="mode-pill" id="modePill" onclick="toggleSupervisor()">👤 Funcionário</div>
 </div>
 
 <div class="main">
-  <div class="screen active" id="screen-punch">
-    <div class="section-label">Quem está batendo o ponto?</div>
-    <div class="emp-grid" id="empGrid"><div class="loading">Carregando...</div></div>
-    <div class="status-card" id="statusCard" style="display:none">
-      <div class="status-row" style="margin-bottom:10px">
-        <div class="status-label">Status atual</div>
-        <div class="status-badge badge-out" id="statusBadge"><span class="badge-dot"></span><span id="statusText">Fora</span></div>
-      </div>
-      <div class="status-row">
-        <div class="status-label">Último registro hoje</div>
-        <div class="status-val" id="lastPunch">—</div>
-      </div>
-    </div>
-    <div class="punch-wrap">
-      <button class="punch-btn disabled" id="punchBtn" onclick="doPunch()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a11 11 0 1 0 0 22A11 11 0 0 0 12 1zm0 20a9 9 0 1 1 0-18 9 9 0 0 1 0 18zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V8z"/></svg>
-        <span id="punchLabel">Selecione</span>
-      </button>
-      <div class="punch-hint" id="punchHint">Selecione seu nome acima</div>
-    </div>
-    <div class="notes-area" id="notesArea" style="display:none">
-      <div class="section-label" style="margin-bottom:0">Descrição do dia</div>
-      <textarea id="dailyNote" placeholder="O que foi trabalhado hoje? (opcional)" rows="3"></textarea>
-    </div>
-    <div class="action-row" id="actionRow" style="display:none">
-      <button class="action-btn amber" onclick="openCorrectionModal()">⏰ Solicitar correção</button>
-      <button class="action-btn blue" onclick="openMedicalModal()">🏥 Licença médica</button>
-    </div>
-    <div class="section-label">Registros de hoje</div>
-    <div id="todayLog"><div class="loading">Carregando...</div></div>
-  </div>
 
-  <div class="screen" id="screen-admin">
-    <div id="pendingSection">
-      <div class="section-label">Solicitações pendentes</div>
-      <div id="pendingList"><div class="loading">Carregando...</div></div>
-    </div>
-
-    <!-- PIN MANAGEMENT -->
-    <div class="section-label" style="margin-top:24px">Gestão de PINs</div>
-    <div id="pinManageArea" style="margin-bottom:24px">
+  <!-- SCREEN: SELECT EMPLOYEE -->
+  <div class="screen active" id="screenSelect">
+    <div class="section-label" id="selectLabel">Selecione seu nome</div>
+    <div class="emp-grid" id="empGrid">
       <div class="loading">Carregando...</div>
     </div>
 
-    <div class="section-label">Período</div>
-    <div class="filter-row">
-      <input type="date" id="dateFrom" />
-      <input type="date" id="dateTo" />
+    <!-- COMPLIANCE OVERVIEW — only visible in supervisor mode -->
+    <div id="complianceSection" style="display:none">
+      <div class="section-label" style="margin-top:28px">📋 Situação de Documentos</div>
+      <div id="complianceArea"><div class="loading">Carregando...</div></div>
     </div>
-    <div class="filter-row" style="margin-top:-10px">
-      <select id="empFilter"><option value="">Todos os funcionários</option></select>
-      <button onclick="loadSummary()">Ver</button>
+  </div>
+
+  <!-- SCREEN: PROFILE -->
+  <div class="screen" id="screenProfile">
+    <button class="back-btn" onclick="goBack()">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      Voltar
+    </button>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <div>
+        <div class="profile-name" id="profileName"></div>
+        <div class="profile-cargo" id="profileCargo"></div>
+        <div class="profile-admissao" id="profileAdmissao"></div>
+      </div>
     </div>
-    <div id="summaryArea"><div class="empty-state">Selecione um período e clique em Ver</div></div>
+
+    <!-- SECTION: Dados Pessoais -->
+    <div class="section-card" id="sectionDados">
+      <div class="section-title"><span>📋</span> Dados Pessoais</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Telefone</div>
+          <div class="info-value" id="infoTelefone">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Admissão</div>
+          <div class="info-value" id="infoAdmissao">—</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:16px"><span>🚨</span> Contato de Emergência</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Nome</div>
+          <div class="info-value" id="infoEmergNome">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Parentesco</div>
+          <div class="info-value" id="infoEmergParentesco">—</div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Telefone 1</div>
+          <div class="info-value" id="infoEmergTel">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Telefone 2</div>
+          <div class="info-value" id="infoEmergTel2">—</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:16px"><span>🏥</span> Saúde</div>
+      <div class="info-grid">
+        <div class="info-row">
+          <div class="info-label">Tipo Sanguíneo</div>
+          <div class="info-value" id="infoTipoSang">—</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Alergias</div>
+          <div class="info-value" id="infoAlergias">—</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Condições Médicas</div>
+        <div class="info-value" id="infoCondicoes">—</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Medicamentos em Uso</div>
+        <div class="info-value" id="infoMedicamentos">—</div>
+      </div>
+
+      <button class="edit-section-btn" id="btnEditDados" style="display:none" onclick="openEditDadosModal()">✏️ Editar informações</button>
+    </div>
+
+    <!-- SECTION: Exames -->
+    <div class="section-card">
+      <div class="section-title"><span>📄</span> Exames Ocupacionais</div>
+      <div id="examesArea"><div class="loading">Carregando...</div></div>
+      <button class="add-doc-btn" id="btnAddExame" style="display:none" onclick="openAddExameModal()">+ Adicionar exame</button>
+    </div>
+
+    <!-- SECTION: NRs -->
+    <div class="section-card">
+      <div class="section-title"><span>📜</span> Treinamentos NR</div>
+      <div id="nrsArea"><div class="loading">Carregando...</div></div>
+      <button class="add-doc-btn" id="btnAddNR" style="display:none" onclick="openAddNRModal()">+ Adicionar NR</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL: Edit Dados -->
+<div class="modal-overlay" id="modalDados">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalDados')">✕</button>
+    <div class="modal-title" id="modalDadosTitle">Editar Dados</div>
+
+    <div class="modal-label">Cargo</div>
+    <input type="text" id="editCargo" placeholder="Ex: Mecânico">
+
+    <div class="modal-label">Data de Admissão</div>
+    <input type="date" id="editAdmissao">
+
+    <div class="modal-label">Telefone Pessoal</div>
+    <input type="tel" id="editTelefone" placeholder="(00) 00000-0000">
+
+    <hr class="modal-divider">
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px;">🚨 Contato de Emergência</div>
+
+    <div class="modal-label">Nome</div>
+    <input type="text" id="editEmergNome" placeholder="Nome completo">
+
+    <div class="modal-label">Parentesco</div>
+    <input type="text" id="editEmergParentesco" placeholder="Ex: Cônjuge, Mãe, Pai...">
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Telefone 1</div>
+        <input type="tel" id="editEmergTel" placeholder="(00) 00000-0000">
+      </div>
+      <div>
+        <div class="modal-label">Telefone 2</div>
+        <input type="tel" id="editEmergTel2" placeholder="(opcional)">
+      </div>
+    </div>
+
+    <hr class="modal-divider">
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px;">🏥 Saúde</div>
+
+    <div class="modal-label">Tipo Sanguíneo</div>
+    <select id="editTipoSang">
+      <option value="">Não informado</option>
+      <option>A+</option><option>A-</option>
+      <option>B+</option><option>B-</option>
+      <option>AB+</option><option>AB-</option>
+      <option>O+</option><option>O-</option>
+    </select>
+
+    <div class="modal-label">Alergias</div>
+    <textarea id="editAlergias" placeholder="Liste alergias conhecidas ou escreva 'Nenhuma'"></textarea>
+
+    <div class="modal-label">Condições Médicas</div>
+    <textarea id="editCondicoes" placeholder="Hipertensão, diabetes, etc."></textarea>
+
+    <div class="modal-label">Medicamentos em Uso</div>
+    <textarea id="editMedicamentos" placeholder="Nome e dosagem dos medicamentos"></textarea>
+
+    <button class="modal-btn primary" onclick="saveDados()">Salvar alterações</button>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit Exame -->
+<div class="modal-overlay" id="modalExame">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalExame')">✕</button>
+    <div class="modal-title" id="modalExameTitle">Exame Ocupacional</div>
+
+    <div class="modal-label">Tipo de Exame</div>
+    <input type="text" id="editExameTipo" placeholder="Ex: ASO Periódico, Audiometria...">
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Data de Realização</div>
+        <input type="date" id="editExameData">
+      </div>
+      <div>
+        <div class="modal-label">Validade</div>
+        <input type="date" id="editExameValidade">
+      </div>
+    </div>
+
+    <div class="modal-label">Observação (opcional)</div>
+    <textarea id="editExameObs" placeholder="Observações adicionais"></textarea>
+
+    <button class="modal-btn primary" onclick="saveExame()">Salvar</button>
+    <button class="modal-btn danger" id="btnDeleteExame" onclick="deleteExame()" style="display:none">Excluir exame</button>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit NR -->
+<div class="modal-overlay" id="modalNR">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal('modalNR')">✕</button>
+    <div class="modal-title" id="modalNRTitle">Treinamento NR</div>
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Código NR</div>
+        <input type="text" id="editNRCodigo" placeholder="Ex: NR-10">
+      </div>
+      <div>
+        <div class="modal-label">Nome</div>
+        <input type="text" id="editNRNome" placeholder="Ex: Elétrica">
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div>
+        <div class="modal-label">Data de Realização</div>
+        <input type="date" id="editNRData">
+      </div>
+      <div>
+        <div class="modal-label">Validade</div>
+        <input type="date" id="editNRValidade">
+      </div>
+    </div>
+
+    <div class="modal-label">Observação (opcional)</div>
+    <textarea id="editNRObs" placeholder="Observações adicionais"></textarea>
+
+    <button class="modal-btn primary" onclick="saveNR()">Salvar</button>
+    <button class="modal-btn danger" id="btnDeleteNR" onclick="deleteNR()" style="display:none">Excluir NR</button>
   </div>
 </div>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav" id="bottomNav">
-  <a class="nav-item active" href="menu.html">
-    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-    Menu
-  </a>
-  <div class="nav-item active" style="color:var(--accent)">
-    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-    Ponto
-  </div>
-  <a class="nav-item" href="ferramentas.html">
-    <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
-    Ferramentas
-  </a>
-  <a class="nav-item" href="perfil.html">
-    <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-    Perfil
-  </a>
+  <a class="nav-item" href="menu.html"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Menu</a>
+  <a class="nav-item" href="index.html"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>Ponto</a>
+  <a class="nav-item" href="ferramentas.html"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Ferramentas</a>
+  <a class="nav-item active" href="perfil.html"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>Perfil</a>
 </nav>
 
-<div class="toast" id="toast"></div>
-
-<!-- PIN MODAL -->
-<div class="pin-overlay" id="pinOverlay">
-  <div class="pin-box">
-    <div class="pin-avatar" id="pinAvatar"></div>
-    <div class="pin-name" id="pinName"></div>
-    <div class="pin-subtitle" id="pinSubtitle">Digite seu PIN</div>
-    <div class="pin-dots" id="pinDots">
-      <div class="pin-dot" id="pd0"></div>
-      <div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div>
-      <div class="pin-dot" id="pd3"></div>
-    </div>
-    <div class="pin-error" id="pinError"></div>
-    <div class="pin-keypad" id="pinKeypad">
-      <div class="pin-key" onclick="pinKey('1')">1</div>
-      <div class="pin-key" onclick="pinKey('2')">2</div>
-      <div class="pin-key" onclick="pinKey('3')">3</div>
-      <div class="pin-key" onclick="pinKey('4')">4</div>
-      <div class="pin-key" onclick="pinKey('5')">5</div>
-      <div class="pin-key" onclick="pinKey('6')">6</div>
-      <div class="pin-key" onclick="pinKey('7')">7</div>
-      <div class="pin-key" onclick="pinKey('8')">8</div>
-      <div class="pin-key" onclick="pinKey('9')">9</div>
-      <div class="pin-key empty"></div>
-      <div class="pin-key" onclick="pinKey('0')">0</div>
-      <div class="pin-key del" onclick="pinBackspace()">⌫</div>
-    </div>
-    <div class="pin-cancel" onclick="closePinModal()">Cancelar</div>
-  </div>
-</div>
-
-<!-- PASSWORD MODAL (replaces prompt() for PWA compatibility) -->
+<!-- PWD MODAL -->
 <div class="pwd-overlay" id="pwdOverlay">
   <div class="pwd-box">
-    <div class="pwd-title">🔒 Acesso ao Resumo</div>
-    <div class="pwd-sub">Digite a senha do supervisor para continuar</div>
-    <input class="pwd-input" type="password" id="pwdInput" placeholder="••••••••••••"
-      onkeydown="if(event.key==='Enter') confirmPwd()">
+    <div class="pwd-title">🔒 Modo Supervisor</div>
+    <div class="pwd-sub">Digite a senha para continuar</div>
+    <input class="pwd-input" type="password" id="pwdInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') confirmPwd()">
     <div class="pwd-error" id="pwdError">Senha incorreta. Tente novamente.</div>
     <div class="pwd-btns">
       <button class="pwd-btn cancel" onclick="cancelPwd()">Cancelar</button>
@@ -421,85 +570,41 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </div>
 
-<!-- MODALS -->
-<div class="modal-overlay" id="correctionModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('correctionModal')">✕</button>
-    <div class="modal-title">Solicitar correção de ponto</div>
-    <div class="modal-label">Tipo de registro</div>
-    <select id="corrType"><option value="clock_in">Entrada</option><option value="clock_out">Saída</option></select>
-    <div class="modal-label">Data</div><input type="date" id="corrDate" />
-    <div class="modal-label">Horário correto</div><input type="time" id="corrTime" />
-    <div class="modal-label">Motivo</div>
-    <textarea id="corrNote" placeholder="Explique o que aconteceu..."></textarea>
-    <button class="modal-btn amber" onclick="submitCorrection()">Enviar solicitação</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="medicalModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('medicalModal')">✕</button>
-    <div class="modal-title">Registrar licença médica</div>
-    <div class="modal-label">Data</div><input type="date" id="medDate" />
-    <div class="modal-label">Observações</div>
-    <textarea id="medNote" placeholder="Informações adicionais (opcional)..."></textarea>
-    <button class="modal-btn primary" onclick="submitMedical()">Enviar licença</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="approveModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('approveModal')">✕</button>
-    <div class="modal-title">Aprovar correção de ponto</div>
-    <div id="approveDetails" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6"></div>
-    <div class="modal-label">Horário correto</div><input type="time" id="approveTime" />
-    <div class="modal-label">Data</div><input type="date" id="approveDate" />
-    <button class="modal-btn green" onclick="approveCorrection()">Confirmar correção</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="editDayModal">
-  <div class="modal" style="max-height:85vh;overflow-y:auto">
-    <button class="modal-close" onclick="closeModal('editDayModal')">✕</button>
-    <div class="modal-title" id="editDayTitle">Editar registros do dia</div>
-    <div id="editDayPunches"></div>
-    <button class="action-btn blue" style="width:100%;margin-bottom:16px;padding:11px" onclick="addEditPunchRow()">+ Adicionar registro</button>
-    <button class="modal-btn green" onclick="saveEditDay()">Salvar alterações</button>
-  </div>
-</div>
-
 <script>
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicafhydro2026!';
 
-let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {}, employeePins = {};
-let pendingCorrections = [], currentCorrectionId = null;
-let editDayContext = null;
-let editDayRows = [];
-let adminUnlocked = false;
-let pendingTabAction = null; // callback after password confirmed
+// ── SCROLL HIDE/SHOW NAV ──
+(function() {
+  let lastY = 0;
+  const nav = document.getElementById('bottomNav');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+})();
 
-// ── PASSWORD MODAL (PWA-safe replacement for prompt()) ──
-function openPwdModal(onSuccess) {
-  pendingTabAction = onSuccess;
+// ── PWD MODAL ──
+let _pwdCb = null;
+function openPwdModal(cb) {
+  _pwdCb = cb;
   document.getElementById('pwdInput').value = '';
   document.getElementById('pwdError').style.display = 'none';
   document.getElementById('pwdOverlay').classList.add('show');
   setTimeout(() => document.getElementById('pwdInput').focus(), 150);
 }
-
 function cancelPwd() {
   document.getElementById('pwdOverlay').classList.remove('show');
-  pendingTabAction = null;
+  _pwdCb = null;
 }
-
 function confirmPwd() {
-  const entered = document.getElementById('pwdInput').value;
-  if (entered === ADMIN_PASSWORD) {
+  if (document.getElementById('pwdInput').value === ADMIN_PASSWORD) {
     document.getElementById('pwdOverlay').classList.remove('show');
     document.getElementById('pwdError').style.display = 'none';
-    if (pendingTabAction) { pendingTabAction(); pendingTabAction = null; }
+    if (_pwdCb) { _pwdCb(); _pwdCb = null; }
   } else {
     document.getElementById('pwdError').style.display = 'block';
     document.getElementById('pwdInput').value = '';
@@ -507,1041 +612,517 @@ function confirmPwd() {
   }
 }
 
-// ── UTILS ──
-function fmtHM(mins) {
-  const total = Math.round(mins);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return `${h}h${String(m).padStart(2,'0')}m`;
-}
+// Supervisors who get full edit access
+const SUPERVISORS = ['Vitor Hugo', 'Cristovao', 'Ana Carolina', 'Tami Pacheco'];
 
+let isSupervisor = false;
+let currentEmployee = null;   // name string
+let currentPerfil = null;     // perfil_funcionario row
+let currentExameId = null;
+let currentNRId = null;
+let allEmployees = [];        // [{full_name, cargo}]
+
+// ── API ──
 async function api(method, path, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     method,
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': method === 'POST' ? 'return=minimal' : 'return=representation' },
+    headers: {
+      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation'
+    },
     body: body ? JSON.stringify(body) : undefined
   });
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
-  if (method === 'GET') return res.json();
-  return true;
+  if (method === 'DELETE') return true;
+  return res.json();
 }
 
-function parseTS(ts) {
-  if (!ts) return new Date(NaN);
-  let s = String(ts).trim();
-  s = s.replace(' ', 'T');
-  s = s.replace(/\+00$/, 'Z');
-  s = s.replace(/\+00:00$/, 'Z');
-  return new Date(s);
-}
-
-function getLocalDate() {
-  const now = new Date();
-  return now.getFullYear() + '-' +
-    String(now.getMonth()+1).padStart(2,'0') + '-' +
-    String(now.getDate()).padStart(2,'0');
-}
-
-function clock() {
-  const now = new Date();
-  document.getElementById('clockTime').textContent = now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('clockDate').textContent = now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'});
-}
-setInterval(clock, 1000); clock();
-
-function toast(msg, type='success') {
+// ── TOAST ──
+function toast(msg, type = 'success') {
   const el = document.getElementById('toast');
   el.textContent = msg; el.className = 'toast show ' + type;
   setTimeout(() => { el.className = 'toast'; }, 2800);
 }
 
-function initials(name) { return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
+// ── MODAL ──
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
+// ── UTILS ──
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function getStatusBadge(validade) {
+  if (!validade) return `<span class="status-badge badge-none">Sem validade</span>`;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const val = new Date(validade + 'T12:00:00');
+  const diffDays = Math.floor((val - today) / 86400000);
+  if (diffDays < 0)   return `<span class="status-badge badge-expired">❌ Vencido</span>`;
+  if (diffDays <= 30) return `<span class="status-badge badge-warn">⚠️ Vence em ${diffDays}d</span>`;
+  return `<span class="status-badge badge-ok">✅ Em dia</span>`;
+}
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function setVal(id, v) { document.getElementById(id).value = v || ''; }
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() {
+  currentEmployee = null;
+  currentPerfil = null;
+  showScreen('screenSelect');
+  if (isSupervisor) loadComplianceOverview();
+}
+
+// ── SUPERVISOR TOGGLE ──
+function toggleSupervisor() {
+  if (isSupervisor) {
+    isSupervisor = false;
+    document.getElementById('modePill').textContent = '👤 Funcionário';
+    document.getElementById('modePill').classList.remove('supervisor');
+    document.getElementById('selectLabel').textContent = 'Selecione seu nome';
+    document.getElementById('complianceSection').style.display = 'none';
+    goBack();
+    return;
+  }
+  openPwdModal(() => {
+    isSupervisor = true;
+    document.getElementById('modePill').textContent = '🔓 Supervisor';
+    document.getElementById('modePill').classList.add('supervisor');
+    document.getElementById('selectLabel').textContent = 'Selecione um funcionário';
+    document.getElementById('complianceSection').style.display = 'block';
+    toast('Modo supervisor ativado', 'success');
+    buildEmpGrid();
+    loadComplianceOverview();
+    if (currentEmployee) openProfile(currentEmployee);
+  });
+}
+
+// ── COMPLIANCE OVERVIEW ──
+async function loadComplianceOverview() {
+  const area = document.getElementById('complianceArea');
+  area.innerHTML = '<div class="loading">Carregando...</div>';
+  try {
+    const [exames, nrs, perfis] = await Promise.all([
+      api('GET', 'exames_funcionario?select=employee_name,data_validade'),
+      api('GET', 'nrs_funcionario?select=employee_name,data_validade'),
+      api('GET', 'perfil_funcionario?select=employee_name,cargo')
+    ]);
+
+    const cargoMap = {};
+    perfis.forEach(p => { cargoMap[p.employee_name] = p.cargo; });
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const in30 = new Date(today); in30.setDate(in30.getDate() + 30);
+
+    function getDocStatus(validade) {
+      if (!validade) return 'none';
+      const d = new Date(validade + 'T12:00:00');
+      if (d < today) return 'expired';
+      if (d <= in30)  return 'warn';
+      return 'ok';
+    }
+
+    // Group by employee
+    const empDocs = {};
+    allEmployees.forEach(name => { empDocs[name] = { exames: [], nrs: [] }; });
+
+    exames.forEach(e => {
+      if (empDocs[e.employee_name]) empDocs[e.employee_name].exames.push(getDocStatus(e.data_validade));
+    });
+    nrs.forEach(n => {
+      if (empDocs[n.employee_name]) empDocs[n.employee_name].nrs.push(getDocStatus(n.data_validade));
+    });
+
+    function worstStatus(statuses) {
+      if (!statuses.length) return 'none';
+      if (statuses.includes('expired')) return 'expired';
+      if (statuses.includes('warn'))    return 'warn';
+      return 'ok';
+    }
+
+    const badgeLabel = { ok: '✅ Em dia', warn: '⚠️ Vencendo', expired: '❌ Vencido', none: '— Sem registros' };
+    const badgeClass = { ok: 'ov-ok', warn: 'ov-warn', expired: 'ov-expired', none: 'ov-none' };
+
+    area.innerHTML = allEmployees.map(name => {
+      const docs = empDocs[name] || { exames: [], nrs: [] };
+      const exameStatus = worstStatus(docs.exames);
+      const nrStatus    = worstStatus(docs.nrs);
+      const overall     = worstStatus([exameStatus, nrStatus]);
+      const cargo       = cargoMap[name] || '';
+
+      return `<div class="overview-card" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
+        <div class="overview-avatar">${initials(name)}</div>
+        <div class="overview-info">
+          <div class="overview-name">${name}</div>
+          ${cargo ? `<div class="overview-cargo">${cargo}</div>` : ''}
+          <div class="overview-badges">
+            <span class="ov-badge ${badgeClass[exameStatus]}">Exames: ${badgeLabel[exameStatus]}</span>
+            <span class="ov-badge ${badgeClass[nrStatus]}">NRs: ${badgeLabel[nrStatus]}</span>
+          </div>
+        </div>
+        <div class="overview-arrow">›</div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    area.innerHTML = '<div class="loading">Erro ao carregar documentos</div>';
+  }
+}
+
+// ── EMPLOYEE GRID ──
 async function loadEmployees() {
   try {
-    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
-    EMPLOYEES = rows.map(r => r.full_name);
-    rows.forEach(r => {
-      employeePins[r.full_name] = r.pin || null;
-      hourlyRates[r.full_name] = {
-        regular: r.regular_hourly_rate||0, overtime: r.overtime_rate||0,
-        weekend: r.weekend_rate||0, saturday: r.saturday_rate||0,
-        sunday: r.sunday_rate||0, holiday: r.holiday_rate||0,
-        overtimeThreshold: r.overtime_threshold_hours||8, saturdayThreshold: r.saturday_threshold_hours||4
-      };
-    });
-    const sel = document.getElementById('empFilter');
-    EMPLOYEES.forEach(emp => { const o = document.createElement('option'); o.value = emp; o.textContent = emp; sel.appendChild(o); });
-  } catch(e) { toast('Erro ao carregar funcionários','error'); }
+    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name');
+    allEmployees = rows.map(r => r.full_name);
+    buildEmpGrid();
+  } catch(e) {
+    document.getElementById('empGrid').innerHTML = '<div class="loading">Erro ao carregar funcionários.</div>';
+  }
 }
 
 function buildEmpGrid() {
   const grid = document.getElementById('empGrid');
-  if (!EMPLOYEES.length) { grid.innerHTML = '<div class="empty-state">Nenhum funcionário encontrado</div>'; return; }
-  grid.innerHTML = EMPLOYEES.map(emp => `
-    <button class="emp-btn" onclick="selectEmp('${emp}')" id="emp-${emp.replace(/\s/g,'_')}">
-      <div class="emp-avatar">${initials(emp)}</div>
-      <div><div class="emp-name">${emp}</div><div class="emp-status" id="empStatus-${emp.replace(/\s/g,'_')}">—</div></div>
-    </button>`).join('');
+  if (!allEmployees.length) { grid.innerHTML = '<div class="loading">Nenhum funcionário encontrado.</div>'; return; }
+  grid.innerHTML = allEmployees.map(name => `
+    <button class="emp-btn" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar">${initials(name)}</div>
+      <div>
+        <div class="emp-name">${name}</div>
+      </div>
+    </button>
+  `).join('');
 }
 
-async function loadTodayStatus() {
-  const today = getLocalDate();
+// ── OPEN PROFILE ──
+async function openProfile(name) {
+  // Employee mode: can only view own profile
+  // Supervisor mode: can view any
+  currentEmployee = name;
+  showScreen('screenProfile');
+
+  // Set avatar + name immediately
+  document.getElementById('profileAvatar').textContent = initials(name);
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileCargo').textContent = '';
+  document.getElementById('profileAdmissao').textContent = '';
+
+  // Show/hide edit buttons
+  const canEdit = isSupervisor || SUPERVISORS.includes(name);
+  document.getElementById('btnEditDados').style.display = canEdit ? 'block' : 'none';
+  document.getElementById('btnAddExame').style.display = canEdit ? 'block' : 'none';
+  document.getElementById('btnAddNR').style.display    = canEdit ? 'block' : 'none';
+
+  // Load data
+  await Promise.all([loadPerfil(name), loadExames(name), loadNRs(name)]);
+}
+
+// ── LOAD PERFIL ──
+async function loadPerfil(name) {
   try {
-    const rows = await api('GET', `time_logs?date=eq.${today}&order=timestamp.asc&select=employee,type,timestamp`);
-    const lastByEmp = {};
-    rows.forEach(r => { lastByEmp[r.employee] = r; });
-    EMPLOYEES.forEach(emp => {
-      const last = lastByEmp[emp];
-      const el = document.getElementById('empStatus-' + emp.replace(/\s/g,'_'));
-      if (!el) return;
-      if (!last) { el.textContent = 'Sem registro'; el.style.color = ''; }
-      else if (last.type === 'clock_in') { el.textContent = '● Trabalhando'; el.style.color = '#22c55e'; }
-      else { el.textContent = '○ Fora'; el.style.color = '#94a3b8'; }
-    });
-  } catch(e) { console.error(e); }
-}
-
-async function loadTodayLog(empFilter) {
-  const today = getLocalDate();
-  const logEl = document.getElementById('todayLog');
-  try {
-    let query = `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`;
-    if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
-    const rows = await api('GET', query);
-    if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
-    logEl.innerHTML = '<div class="log-list">' + rows.map(r => {
-      const t = parseTS(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
-      const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
-      const corrBadge = r.is_corrected ? '<span class="log-corrected-badge">corrigido</span>' : '';
-      const noteHtml = r.notes ? `<div class="log-note">📝 ${r.notes}</div>` : '';
-      return `<div class="log-item">
-        <div class="log-item-row">
-          <div class="log-left">
-            <div class="log-dot ${r.is_corrected?'corrected':r.type==='clock_in'?'in':'out'}"></div>
-            <div><div class="log-type">${typeLabel}${corrBadge}</div><div class="log-emp">${r.employee}</div></div>
-          </div>
-          <div class="log-time">${t}</div>
-        </div>${noteHtml}
-      </div>`;
-    }).join('') + '</div>';
-  } catch(e) { logEl.innerHTML = '<div class="empty-state">Erro ao carregar registros</div>'; }
-}
-
-function selectEmp(name) {
-  // Check lockout first
-  openPinModal(name);
-}
-
-// ── PIN MODAL LOGIC ──
-let pinBuffer = '';
-let pinMode = 'verify'; // 'verify' | 'create' | 'confirm'
-let pinCreateFirst = '';
-let pinTargetEmp = '';
-
-function openPinModal(name) {
-  pinTargetEmp = name;
-  pinBuffer = '';
-  pinCreateFirst = '';
-  document.getElementById('pinAvatar').textContent = initials(name);
-  document.getElementById('pinName').textContent = name;
-  document.getElementById('pinError').textContent = '';
-  document.getElementById('pinOverlay').classList.add('show');
-
-  const hasPin = !!employeePins[name];
-  if (hasPin) {
-    pinMode = 'verify';
-    document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
-    checkLockout(name);
-  } else {
-    pinMode = 'create';
-    document.getElementById('pinSubtitle').innerHTML = 'Primeiro acesso! Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
-    enableKeypad(true);
-  }
-  updatePinDots();
-}
-
-function closePinModal() {
-  document.getElementById('pinOverlay').classList.remove('show');
-  pinBuffer = '';
-  pinCreateFirst = '';
-  pinTargetEmp = '';
-}
-
-async function checkLockout(name) {
-  try {
-    const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    }).then(r => r.json());
-
-    const row = rows[0];
-    if (row && row.locked_until) {
-      const until = new Date(row.locked_until);
-      const now = new Date();
-      if (until > now) {
-        const mins = Math.ceil((until - now) / 60000);
-        document.getElementById('pinError').textContent = `🔒 Bloqueado por mais ${mins} min`;
-        enableKeypad(false);
-        return;
-      }
-    }
-    enableKeypad(true);
+    const rows = await api('GET', `perfil_funcionario?employee_name=eq.${encodeURIComponent(name)}&select=*`);
+    currentPerfil = rows[0] || null;
+    renderPerfil(currentPerfil);
   } catch(e) {
-    enableKeypad(true);
+    toast('Erro ao carregar perfil', 'error');
   }
 }
 
-function enableKeypad(enabled) {
-  document.getElementById('pinKeypad').style.opacity = enabled ? '1' : '0.3';
-  document.getElementById('pinKeypad').style.pointerEvents = enabled ? '' : 'none';
-}
-
-function pinKey(digit) {
-  if (pinBuffer.length >= 4) return;
-  pinBuffer += digit;
-  updatePinDots();
-  if (pinBuffer.length === 4) {
-    setTimeout(() => handlePinComplete(), 120);
-  }
-}
-
-function pinBackspace() {
-  pinBuffer = pinBuffer.slice(0, -1);
-  updatePinDots();
-}
-
-function updatePinDots(state = 'normal') {
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById('pd' + i);
-    dot.className = 'pin-dot';
-    if (state === 'error') dot.classList.add('error');
-    else if (i < pinBuffer.length) dot.classList.add('filled');
-  }
-}
-
-async function handlePinComplete() {
-  if (pinMode === 'create') {
-    pinCreateFirst = pinBuffer;
-    pinBuffer = '';
-    pinMode = 'confirm';
-    document.getElementById('pinSubtitle').innerHTML = 'Digite o PIN novamente para confirmar';
-    document.getElementById('pinError').textContent = '';
-    updatePinDots();
-
-  } else if (pinMode === 'confirm') {
-    if (pinBuffer !== pinCreateFirst) {
-      document.getElementById('pinError').textContent = 'Os PINs não coincidem. Comece novamente.';
-      updatePinDots('error');
-      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 800);
-      pinMode = 'create';
-      pinCreateFirst = '';
-      document.getElementById('pinSubtitle').innerHTML = 'Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
-      return;
-    }
-    // Save PIN
-    await savePinToSupabase(pinTargetEmp, pinBuffer);
-
-  } else if (pinMode === 'verify') {
-    await verifyPin(pinTargetEmp, pinBuffer);
-  }
-}
-
-async function savePinToSupabase(name, pin) {
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ pin })
-    });
-    employeePins[name] = pin;
-    toast('PIN criado com sucesso!', 'success');
-    closePinModal();
-    unlockEmployee(name);
-  } catch(e) {
-    toast('Erro ao salvar PIN', 'error');
-    pinBuffer = '';
-    updatePinDots();
-  }
-}
-
-async function verifyPin(name, entered) {
-  if (entered === employeePins[name]) {
-    // Clear lockout
-    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-    }).catch(() => {});
-    closePinModal();
-    unlockEmployee(name);
-  } else {
-    // Wrong PIN
-    updatePinDots('error');
-    await registerFailedAttempt(name);
-    setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
-  }
-}
-
-async function registerFailedAttempt(name) {
-  try {
-    // Get current record
-    const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    }).then(r => r.json());
-
-    const current = rows[0];
-    const attempts = (current?.failed_attempts || 0) + 1;
-
-    if (attempts >= 3) {
-      const lockedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await upsertLockout(name, attempts, lockedUntil);
-      const mins = 5;
-      document.getElementById('pinError').textContent = `🔒 Bloqueado por ${mins} minutos`;
-      enableKeypad(false);
-    } else {
-      await upsertLockout(name, attempts, null);
-      document.getElementById('pinError').textContent = `PIN incorreto — tentativa ${attempts}/3`;
-    }
-  } catch(e) {
-    document.getElementById('pinError').textContent = 'PIN incorreto';
-  }
-}
-
-async function upsertLockout(name, attempts, lockedUntil) {
-  await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=minimal'
-    },
-    body: JSON.stringify({ employee_name: name, failed_attempts: attempts, locked_until: lockedUntil })
-  });
-}
-
-// ── PIN MANAGEMENT (supervisor) ──
-async function loadPinManagement() {
-  const area = document.getElementById('pinManageArea');
-  try {
-    const [users, lockouts] = await Promise.all([
-      api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin'),
-      fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?select=employee_name,failed_attempts,locked_until`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-      }).then(r => r.json())
-    ]);
-    const lockoutMap = {};
-    lockouts.forEach(l => { lockoutMap[l.employee_name] = l; });
-
-    area.innerHTML = users.map(u => {
-      const lockout = lockoutMap[u.full_name];
-      const isLocked = lockout?.locked_until && new Date(lockout.locked_until) > new Date();
-      let statusClass, statusText;
-      if (isLocked) {
-        const mins = Math.ceil((new Date(lockout.locked_until) - new Date()) / 60000);
-        statusClass = 'locked'; statusText = `🔒 Bloqueado — ${mins}min restantes`;
-      } else if (u.pin) {
-        statusClass = 'has-pin'; statusText = '✅ PIN cadastrado';
-      } else {
-        statusClass = 'no-pin'; statusText = '⚠️ Sem PIN — criará no primeiro acesso';
-      }
-      return `<div class="pin-manage-card">
-        <div class="pin-manage-info">
-          <div class="pin-manage-avatar">${initials(u.full_name)}</div>
-          <div>
-            <div class="pin-manage-name">${u.full_name}</div>
-            <div class="pin-manage-status ${statusClass}">${statusText}</div>
-          </div>
-        </div>
-        ${u.pin || isLocked ? `<button class="pin-reset-btn" onclick="resetPin('${u.full_name.replace(/'/g,"\\'")}')">Resetar PIN</button>` : ''}
-      </div>`;
-    }).join('');
-  } catch(e) {
-    area.innerHTML = '<div class="empty-state">Erro ao carregar PINs</div>';
-  }
-}
-
-async function resetPin(name) {
-  if (!confirm(`Resetar o PIN de ${name}?\n\nEle precisará criar um novo PIN no próximo acesso.`)) return;
-  try {
-    // Clear PIN in usuario table
-    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ pin: null })
-    });
-    // Clear lockout
-    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-    });
-    // Update local cache
-    employeePins[name] = null;
-    toast(`PIN de ${name} resetado`, 'success');
-    loadPinManagement();
-  } catch(e) {
-    toast('Erro ao resetar PIN', 'error');
-  }
-}
-
-function unlockEmployee(name) {
-  selectedEmp = name;
-  document.querySelectorAll('.emp-btn').forEach(b => b.classList.remove('selected'));
-  const btn = document.getElementById('emp-' + name.replace(/\s/g,'_'));
-  if (btn) btn.classList.add('selected');
-  updatePunchBtn();
-  document.getElementById('statusCard').style.display = 'block';
-  document.getElementById('notesArea').style.display = 'block';
-  document.getElementById('actionRow').style.display = 'flex';
-  loadTodayNote(name);
-  loadTodayLog(name);
-}
-
-async function loadTodayNote(emp) {
-  const today = getLocalDate();
-  try {
-    const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(emp)}&not.notes.is.null&limit=1&select=notes`);
-    document.getElementById('dailyNote').value = (rows.length && rows[0].notes) ? rows[0].notes : '';
-  } catch(e) {}
-}
-
-async function updatePunchBtn() {
-  if (!selectedEmp) return;
-  const btn = document.getElementById('punchBtn'), hint = document.getElementById('punchHint');
-  const badge = document.getElementById('statusBadge'), statusText = document.getElementById('statusText');
-  const lastPunch = document.getElementById('lastPunch');
-  const today = getLocalDate();
-  try {
-    const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&order=timestamp.desc&limit=1&select=type,timestamp`);
-    const last = rows[0];
-    if (!last || last.type === 'clock_out') {
-      btn.className = 'punch-btn in';
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"/></svg><span>Entrada</span>`;
-      badge.className = 'status-badge badge-out'; statusText.textContent = 'Fora';
-      hint.textContent = 'Toque para registrar entrada';
-    } else {
-      btn.className = 'punch-btn out';
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg><span>Saída</span>`;
-      badge.className = 'status-badge badge-in'; statusText.textContent = 'Trabalhando';
-      hint.textContent = 'Toque para registrar saída';
-    }
-    lastPunch.textContent = last ? parseTS(last.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : '—';
-  } catch(e) { console.error(e); }
-}
-
-async function doPunch() {
-  if (!selectedEmp) return;
-  const btn = document.getElementById('punchBtn');
-  if (btn.classList.contains('disabled')) return;
-  const today = getLocalDate();
-  const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&order=timestamp.desc&limit=1&select=type`);
-  const last = rows[0];
-  const type = (!last || last.type === 'clock_out') ? 'clock_in' : 'clock_out';
-  const note = document.getElementById('dailyNote').value.trim();
-  btn.classList.add('disabled');
-  btn.style.pointerEvents = 'none';
-  try {
-    btn.style.opacity = '0.5';
-    await api('POST', 'time_logs', { employee: selectedEmp, type, timestamp: new Date().toISOString(), date: today, notes: note||null });
-    toast(`${type==='clock_in'?'Entrada':'Saída'} registrada — ${selectedEmp}`, 'success');
-    await Promise.all([loadTodayStatus(), updatePunchBtn(), loadTodayLog()]);
-  } catch(e) { toast('Erro ao registrar. Tente novamente.','error'); }
-  finally {
-    btn.style.opacity = '1';
-    setTimeout(() => { btn.style.pointerEvents = ''; }, 3000);
-  }
-}
-
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
-function openCorrectionModal() {
-  if (!selectedEmp) { toast('Selecione seu nome primeiro','error'); return; }
-  document.getElementById('corrDate').value = getLocalDate();
-  document.getElementById('corrTime').value = '';
-  document.getElementById('corrNote').value = '';
-  openModal('correctionModal');
-}
-
-function openMedicalModal() {
-  if (!selectedEmp) { toast('Selecione seu nome primeiro','error'); return; }
-  document.getElementById('medDate').value = getLocalDate();
-  document.getElementById('medNote').value = '';
-  openModal('medicalModal');
-}
-
-async function submitCorrection() {
-  const date = document.getElementById('corrDate').value;
-  const time = document.getElementById('corrTime').value;
-  const note = document.getElementById('corrNote').value.trim();
-  const type = document.getElementById('corrType').value;
-  if (!date || !time) { toast('Preencha data e horário','error'); return; }
-  try {
-    await api('POST', 'solicitacao_correcao_ponto', { employee: selectedEmp, date, type, requested_time: time, note: note||null, status: 'pending' });
-    toast('Solicitação enviada ao supervisor','success');
-    closeModal('correctionModal'); loadPendingRequests();
-  } catch(e) { toast('Erro ao enviar solicitação','error'); }
-}
-
-async function submitMedical() {
-  const date = document.getElementById('medDate').value;
-  const note = document.getElementById('medNote').value.trim();
-  if (!date) { toast('Selecione a data','error'); return; }
-  try {
-    await api('POST', 'atestado_medico', { employee: selectedEmp, date, note: note||null });
-    toast('Licença médica registrada','success');
-    closeModal('medicalModal'); loadPendingRequests();
-  } catch(e) { toast('Erro ao registrar licença','error'); }
-}
-
-async function loadPendingRequests() {
-  const listEl = document.getElementById('pendingList');
-  try {
-    const [corrections, medicals] = await Promise.all([
-      api('GET', 'solicitacao_correcao_ponto?status=eq.pending&order=created_at.desc&select=*'),
-      api('GET', 'atestado_medico?order=created_at.desc&select=*')
-    ]);
-    pendingCorrections = corrections;
-    const total = corrections.length + medicals.length;
-    const badge = document.getElementById('pendingBadge');
-    if (total > 0) { badge.style.display = 'inline'; badge.textContent = total; }
-    else { badge.style.display = 'none'; }
-    if (!corrections.length && !medicals.length) { listEl.innerHTML = '<div class="empty-state">Nenhuma solicitação pendente</div>'; return; }
-    let html = '';
-    corrections.forEach(c => {
-      const typeLabel = c.type === 'clock_in' ? 'Entrada' : 'Saída';
-      const d = new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
-      html += `<div class="request-card">
-        <div class="request-header"><span class="request-type correction">⏰ Correção de ponto</span><span style="font-size:11px;color:var(--text3)">${d}</span></div>
-        <div class="request-body">
-          <div class="request-emp">${c.employee}</div>
-          <div class="request-detail">${typeLabel} · Horário solicitado: ${c.requested_time}</div>
-          ${c.note?`<div class="request-note">"${c.note}"</div>`:''}
-          <div class="request-actions">
-            <button class="req-btn approve" onclick="openApproveModal('${c.id}','${c.employee}','${c.date}','${c.type}','${c.requested_time}')">✓ Aprovar</button>
-            <button class="req-btn dismiss" onclick="dismissRequest('${c.id}')">Dispensar</button>
-          </div>
-        </div>
-      </div>`;
-    });
-    medicals.forEach(m => {
-      const d = new Date(m.date + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
-      html += `<div class="request-card">
-        <div class="request-header"><span class="request-type medical">🏥 Licença médica</span><span style="font-size:11px;color:var(--text3)">${d}</span></div>
-        <div class="request-body">
-          <div class="request-emp">${m.employee}</div>
-          ${m.note?`<div class="request-note">"${m.note}"</div>`:''}
-          <div class="request-actions"><button class="req-btn dismiss" onclick="dismissMedical('${m.id}')">Marcar como visto</button></div>
-        </div>
-      </div>`;
-    });
-    listEl.innerHTML = html;
-  } catch(e) { listEl.innerHTML = '<div class="empty-state">Erro ao carregar solicitações</div>'; }
-}
-
-function openApproveModal(id, emp, date, type, requestedTime) {
-  currentCorrectionId = id;
-  const typeLabel = type === 'clock_in' ? 'Entrada' : 'Saída';
-  const d = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('approveDetails').innerHTML = `<strong>${emp}</strong><br>Tipo: ${typeLabel}<br>Data: ${d}<br>Horário solicitado: <strong>${requestedTime}</strong>`;
-  document.getElementById('approveTime').value = requestedTime;
-  document.getElementById('approveDate').value = date;
-  openModal('approveModal');
-}
-
-async function approveCorrection() {
-  const time = document.getElementById('approveTime').value;
-  const date = document.getElementById('approveDate').value;
-  if (!time || !date) { toast('Preencha data e horário','error'); return; }
-  const req = pendingCorrections.find(c => c.id === currentCorrectionId);
-  if (!req) return;
-  const timestamp = new Date(date + 'T' + time + ':00').toISOString();
-  try {
-    await api('POST', 'time_logs', { employee: req.employee, type: req.type, timestamp, date, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() });
-    await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + currentCorrectionId, {
-      method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'approved' })
-    });
-    toast('Correção aplicada com sucesso','success');
-    closeModal('approveModal'); loadPendingRequests(); loadTodayLog();
-  } catch(e) { toast('Erro ao aplicar correção','error'); }
-}
-
-async function dismissRequest(id) {
-  try {
-    await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + id, {
-      method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'dismissed' })
-    });
-    toast('Solicitação dispensada','warn'); loadPendingRequests();
-  } catch(e) { toast('Erro','error'); }
-}
-
-async function dismissMedical(id) {
-  try {
-    await fetch(SUPABASE_URL + '/rest/v1/atestado_medico?id=eq.' + id, {
-      method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-    });
-    toast('Marcado como visto','success'); loadPendingRequests();
-  } catch(e) { toast('Erro','error'); }
-}
-
-// ── EDIT DAY ──
-function openEditDayModal(employee, date) {
-  const data = window._lastReportData;
-  if (!data || !data.byEmp[employee] || !data.byEmp[employee].punches[date]) { toast('Dados não encontrados','error'); return; }
-  const punches = data.byEmp[employee].punches[date];
-  if (punches[0] && punches[0].type === 'medical') { toast('Este dia é licença médica — sem registros de ponto para editar','error'); return; }
-  editDayContext = { employee, date };
-  editDayRows = punches.map(p => ({
-    id: p.id || null,
-    type: p.type,
-    time: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
-    isNew: false, deleted: false
-  }));
-  const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('editDayTitle').textContent = `${employee} — ${ds}`;
-  renderEditDayRows();
-  openModal('editDayModal');
-}
-
-function renderEditDayRows() {
-  const container = document.getElementById('editDayPunches');
-  container.innerHTML = editDayRows.map((r, i) => {
-    if (r.deleted) return '';
-    return `<div class="edit-punch-row">
-      <select onchange="editDayRows[${i}].type=this.value">
-        <option value="clock_in" ${r.type==='clock_in'?'selected':''}>Entrada</option>
-        <option value="clock_out" ${r.type==='clock_out'?'selected':''}>Saída</option>
-      </select>
-      <input type="time" value="${r.time}" onchange="editDayRows[${i}].time=this.value" />
-      <button class="ep-remove" onclick="removeEditPunchRow(${i})">✕</button>
-    </div>`;
-  }).join('');
-}
-
-function addEditPunchRow() {
-  const visible = editDayRows.filter(r => !r.deleted);
-  const lastType = visible.length ? visible[visible.length-1].type : 'clock_out';
-  editDayRows.push({ id: null, type: lastType === 'clock_in' ? 'clock_out' : 'clock_in', time: '', isNew: true, deleted: false });
-  renderEditDayRows();
-}
-
-function removeEditPunchRow(i) {
-  if (editDayRows[i].id) { editDayRows[i].deleted = true; }
-  else { editDayRows.splice(i, 1); }
-  renderEditDayRows();
-}
-
-async function saveEditDay() {
-  if (!editDayContext) return;
-  const { employee, date } = editDayContext;
-  const visible = editDayRows.filter(r => !r.deleted);
-  for (const r of visible) {
-    if (!r.time) { toast('Preencha o horário de todos os registros','error'); return; }
-  }
-  try {
-    for (const r of editDayRows) {
-      const timestamp = new Date(date + 'T' + r.time + ':00').toISOString();
-      if (r.deleted && r.id) {
-        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
-          method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-        });
-      } else if (r.deleted) {
-        continue;
-      } else if (r.id) {
-        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
-          method: 'PATCH',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ type: r.type, timestamp, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() })
-        });
-      } else {
-        await api('POST', 'time_logs', { employee, type: r.type, timestamp, date, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() });
-      }
-    }
-    toast('Registros do dia atualizados','success');
-    closeModal('editDayModal');
-    editDayContext = null; editDayRows = [];
-    loadSummary();
-  } catch(e) { toast('Erro ao salvar alterações','error'); console.error(e); }
-}
-
-// ── TABS (now uses password modal instead of prompt) ──
-function switchTab(tab) {
-  if (tab === 'admin' && !adminUnlocked) {
-    openPwdModal(() => {
-      adminUnlocked = true;
-      loadPendingRequests();
-      loadPinManagement();
-      _activateTab('admin');
-    });
+function renderPerfil(p) {
+  const def = (v) => v || '—';
+  if (!p) {
+    // No row yet
+    document.getElementById('profileCargo').textContent = '';
+    document.getElementById('profileAdmissao').textContent = '';
+    ['infoTelefone','infoEmergNome','infoEmergParentesco','infoEmergTel','infoEmergTel2',
+     'infoTipoSang','infoAlergias','infoCondicoes','infoMedicamentos'].forEach(id => {
+       const el = document.getElementById(id);
+       el.textContent = 'Não informado'; el.className = 'info-value empty';
+     });
+    document.getElementById('infoAdmissao').textContent = '—';
     return;
   }
-  _activateTab(tab);
-}
+  document.getElementById('profileCargo').textContent = p.cargo || '';
+  document.getElementById('profileAdmissao').textContent = p.data_admissao ? `Desde ${fmtDate(p.data_admissao)}` : '';
+  document.getElementById('infoTelefone').textContent = def(p.telefone);
+  document.getElementById('infoAdmissao').textContent = fmtDate(p.data_admissao);
+  document.getElementById('infoEmergNome').textContent = def(p.contato_emergencia_nome);
+  document.getElementById('infoEmergParentesco').textContent = def(p.contato_emergencia_parentesco);
+  document.getElementById('infoEmergTel').textContent = def(p.contato_emergencia_tel);
+  document.getElementById('infoEmergTel2').textContent = def(p.contato_emergencia_tel2);
+  document.getElementById('infoTipoSang').textContent = def(p.tipo_sanguineo);
+  document.getElementById('infoAlergias').textContent = def(p.alergias);
+  document.getElementById('infoCondicoes').textContent = def(p.condicoes_medicas);
+  document.getElementById('infoMedicamentos').textContent = def(p.medicamentos);
 
-function _activateTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',(i===0&&tab==='punch')||(i===1&&tab==='admin')));
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + tab).classList.add('active');
-}
-
-function setDefaultDates() {
-  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
-  document.getElementById('dateFrom').value = new Date(y,m,1).toISOString().split('T')[0];
-  document.getElementById('dateTo').value = new Date(y,m+1,0).toISOString().split('T')[0];
-}
-
-async function loadSummary() {
-  const from = document.getElementById('dateFrom').value;
-  const to = document.getElementById('dateTo').value;
-  const empFilter = document.getElementById('empFilter').value;
-  if (!from || !to) { toast('Selecione o período','error'); return; }
-  const area = document.getElementById('summaryArea');
-  area.innerHTML = '<div class="loading">Calculando...</div>';
-  try {
-    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected`;
-    if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
-    const rows = await api('GET', query);
-    let medQuery = `atestado_medico?date=gte.${from}&date=lte.${to}&select=employee,date,note`;
-    if (empFilter) medQuery += `&employee=eq.${encodeURIComponent(empFilter)}`;
-    const medRows = await api('GET', medQuery);
-    if (!rows.length && !medRows.length) { area.innerHTML = '<div class="empty-state">Nenhum registro no período</div>'; return; }
-    const byEmp = {};
-    rows.forEach(r => {
-      if (!byEmp[r.employee]) byEmp[r.employee] = { punches: {}, notes: {} };
-      if (!byEmp[r.employee].punches[r.date]) byEmp[r.employee].punches[r.date] = [];
-      byEmp[r.employee].punches[r.date].push(r);
-      if (r.notes && !byEmp[r.employee].notes[r.date]) byEmp[r.employee].notes[r.date] = r.notes;
-    });
-    medRows.forEach(m => {
-      if (!byEmp[m.employee]) byEmp[m.employee] = { punches: {}, notes: {} };
-      if (!byEmp[m.employee].punches[m.date]) byEmp[m.employee].punches[m.date] = [{ type: 'medical', medical_note: m.note }];
-    });
-    Object.keys(byEmp).forEach(emp => {
-      Object.keys(byEmp[emp].punches).forEach(date => {
-        byEmp[emp].punches[date].sort((a,b) => parseTS(a.timestamp) - parseTS(b.timestamp));
-      });
-    });
-    let html = '';
-    const payByEmp = {};
-    Object.keys(byEmp).sort().forEach(emp => {
-      let empTotalMins = 0, empPayTotal = 0, detailRows = '';
-      let empRegularMins = 0, empRegularOTMins = 0, empSaturdayMins = 0, empSundayHolidayMins = 0;
-      const rates = hourlyRates[emp] || {};
-      Object.keys(byEmp[emp].punches).sort().forEach(date => {
-        const punches = byEmp[emp].punches[date];
-        const dayNote = byEmp[emp].notes[date] || '';
-        if (punches[0] && punches[0].type === 'medical') {
-          const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
-          detailRows += `<div class="summary-row"><div><div style="font-size:13px">🏥 ${ds}</div><div class="sum-note">Licença médica${punches[0].medical_note?': '+punches[0].medical_note:''}</div></div><div style="text-align:right"><div class="sum-hours" style="font-size:13px">—</div></div></div>`;
-          return;
-        }
-        let mins = 0;
-        for (let i = 0; i < punches.length - 1; i++) {
-          if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-            mins += (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
-            i++;
-          }
-        }
-        const hrs = mins / 60;
-        const tipoDia = punches[0].tipo_dia || 'regular';
-        const threshold = rates.overtimeThreshold || 8;
-        const satThreshold = rates.saturdayThreshold || 4;
-        let pay = 0, regularMinsDay = 0, regularOTMinsDay = 0, saturdayMinsDay = 0, sundayHolidayMinsDay = 0;
-        if (tipoDia === 'feriado' || tipoDia === 'domingo') {
-          sundayHolidayMinsDay = mins;
-          pay = hrs * (rates.holiday || rates.sunday || rates.regular || 0);
-        } else if (tipoDia === 'sabado') {
-          regularMinsDay = Math.min(mins, satThreshold*60);
-          saturdayMinsDay = Math.max(0, mins - satThreshold*60);
-          pay = (regularMinsDay/60*(rates.regular||0)) + (saturdayMinsDay/60*(rates.saturday||rates.overtime||0));
-        } else {
-          regularMinsDay = Math.min(mins, threshold*60);
-          regularOTMinsDay = Math.max(0, mins - threshold*60);
-          pay = (regularMinsDay/60*(rates.regular||0)) + (regularOTMinsDay/60*(rates.overtime||0));
-        }
-        empTotalMins += mins; empPayTotal += pay;
-        empRegularMins += regularMinsDay; empRegularOTMins += regularOTMinsDay;
-        empSaturdayMins += saturdayMinsDay; empSundayHolidayMins += sundayHolidayMinsDay;
-        const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
-        const tipoBadge = tipoDia==='feriado'?'🔴':tipoDia==='sabado'?'🟡':tipoDia==='domingo'?'🟠':'🟢';
-        const hasCorrected = punches.some(p => p.is_corrected);
-        detailRows += `<div class="summary-row summary-row-clickable" onclick="openEditDayModal('${emp.replace(/'/g,"\\'")}','${date}')">
-          <div>
-            <div style="font-size:13px;font-weight:400">${tipoBadge} ${ds}${hasCorrected?' <span style="font-size:10px;color:var(--amber)">✎</span>':''} <span class="day-edit-trigger">editar</span></div>
-            ${dayNote?`<div class="sum-note" style="max-width:220px;white-space:normal">📝 ${dayNote}</div>`:''}
-          </div>
-          <div style="text-align:right">
-            <div class="sum-hours" style="font-size:13px">${fmtHM(mins)}</div>
-            <div style="font-size:11px;color:var(--text3)">R$ ${pay.toFixed(2)}</div>
-          </div>
-        </div>`;
-      });
-      payByEmp[emp] = empPayTotal;
-      html += `<div class="summary-card"><div class="summary-header" style="display:flex;justify-content:space-between;align-items:center"><span>${emp}</span><span style="color:var(--accent)">${fmtHM(empTotalMins)}</span></div>
-        <div style="padding:10px 16px;border-bottom:1px solid var(--border)" class="hours-breakdown">
-          <span class="hours-chip">Horas regulares: ${fmtHM(empRegularMins)}</span>
-          <span class="hours-chip">Hora extra regular (50%): ${fmtHM(empRegularOTMins)}</span>
-          <span class="hours-chip">Hora extra sábado (50%): ${fmtHM(empSaturdayMins)}</span>
-          <span class="hours-chip">Domingo/Feriado (100%): ${fmtHM(empSundayHolidayMins)}</span>
-        </div>
-        ${detailRows}</div>`;
-    });
-    let payTotal = 0, payRows = '';
-    Object.keys(payByEmp).sort().forEach(emp => {
-      payTotal += payByEmp[emp];
-      payRows += `<div class="pay-row"><div class="pay-name">${emp}</div><div class="pay-val">R$ ${payByEmp[emp].toFixed(2)}</div></div>`;
-    });
-    html += `<div class="pay-card"><div class="pay-title">Estimativa de pagamento</div>${payRows}<div class="pay-row"><div class="pay-name" style="font-weight:600;color:#fff">Total</div><div class="pay-val">R$ ${payTotal.toFixed(2)}</div></div></div>`;
-    html += `<div class="export-row">
-      <button class="export-btn" onclick="exportExcel()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Excel
-      </button>
-      <button class="export-btn" style="border-color:#3b82f6;color:#3b82f6" onclick="exportPDF()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>PDF
-      </button>
-    </div>`;
-    area.innerHTML = html;
-    window._lastReportData = { byEmp, payByEmp, payTotal, from, to, empFilter };
-  } catch(e) { area.innerHTML = '<div class="empty-state">Erro ao carregar dados</div>'; console.error(e); }
-}
-
-function buildReportRows(byEmp, payByEmp) {
-  const allRows = [];
-  Object.keys(byEmp).sort().forEach(emp => {
-    Object.keys(byEmp[emp].punches).sort().forEach(date => {
-      const punches = byEmp[emp].punches[date];
-      const dayNote = byEmp[emp].notes[date] || '';
-      const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
-      if (punches[0] && punches[0].type === 'medical') {
-        allRows.push({ emp, date: ds, entrada:'—', saida:'—', total:'—', pagamento:'—', tipo:'Licença Médica', descricao: punches[0].medical_note||'', corrigido: false });
-        return;
-      }
-      let mins = 0, corrected = false;
-      const pairs = [];
-      for (let i = 0; i < punches.length - 1; i++) {
-        if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-          const inT = parseTS(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
-          const outT = parseTS(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
-          const pairMins = (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
-          mins += pairMins;
-          if (punches[i].is_corrected || punches[i+1].is_corrected) corrected = true;
-          pairs.push({ inT, outT });
-          i++;
-        }
-      }
-      const rates = hourlyRates[emp] || {};
-      const tipoDia = punches[0].tipo_dia || 'regular';
-      const tipoLabel = tipoDia==='feriado'?'Feriado':tipoDia==='sabado'?'Sábado':tipoDia==='domingo'?'Domingo':'Regular';
-      const hrs = mins/60;
-      let pay = 0, regularMins = 0, regularOTMins = 0, saturdayMins = 0, sundayHolidayMins = 0;
-      const threshold = rates.overtimeThreshold||8;
-      const satThreshold = rates.saturdayThreshold||4;
-      if (tipoDia==='feriado'||tipoDia==='domingo') {
-        sundayHolidayMins = mins; pay = hrs*(rates.holiday||rates.sunday||rates.regular||0);
-      } else if (tipoDia==='sabado') {
-        regularMins = Math.min(mins, satThreshold*60);
-        saturdayMins = Math.max(0, mins - satThreshold*60);
-        pay = (regularMins/60*(rates.regular||0)) + (saturdayMins/60*(rates.saturday||rates.overtime||0));
-      } else {
-        regularMins = Math.min(mins, threshold*60);
-        regularOTMins = Math.max(0, mins - threshold*60);
-        pay = (regularMins/60*(rates.regular||0)) + (regularOTMins/60*(rates.overtime||0));
-      }
-      const entradaStr = pairs.map(p => p.inT).join(' / ') || '—';
-      const saidaStr = pairs.map(p => p.outT).join(' / ') || '—';
-      allRows.push({ emp, date: ds, entrada: entradaStr, saida: saidaStr, total: fmtHM(mins), pagamento: `R$ ${pay.toFixed(2)}`, tipo: tipoLabel, descricao: dayNote, corrigido: corrected, regularStr: fmtHM(regularMins), regularOTStr: fmtHM(regularOTMins), saturdayStr: fmtHM(saturdayMins), sundayHolidayStr: fmtHM(sundayHolidayMins), regularMins, regularOTMins, saturdayMins, sundayHolidayMins });
-    });
+  // Reset classes
+  ['infoTelefone','infoAdmissao','infoEmergNome','infoEmergParentesco','infoEmergTel','infoEmergTel2',
+   'infoTipoSang','infoAlergias','infoCondicoes','infoMedicamentos'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'info-value' + (el.textContent === '—' || el.textContent === 'Não informado' ? ' empty' : '');
   });
-  return allRows;
 }
 
-function exportExcel() {
-  const data = window._lastReportData;
-  if (!data) return;
-  const { byEmp, payByEmp, payTotal, from, to, empFilter } = data;
-  const fromFmt = new Date(from+'T12:00:00').toLocaleDateString('pt-BR');
-  const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  script.onload = () => {
-    const wb = XLSX.utils.book_new();
-    const summaryData = [['VICAF HYDRO — RELATÓRIO DE PONTO'],[`Período: ${fromFmt} a ${toFmt}`],[`Gerado em: ${new Date().toLocaleString('pt-BR')}`],[],['Funcionário','Total Horas','Pagamento Estimado']];
-    Object.keys(payByEmp).sort().forEach(emp => {
-      let totalMins = 0;
-      Object.keys(byEmp[emp].punches).sort().forEach(date => {
-        const punches = byEmp[emp].punches[date];
-        if (punches[0] && punches[0].type==='medical') return;
-        for (let i=0;i<punches.length-1;i++) { if(punches[i].type==='clock_in'&&punches[i+1].type==='clock_out'){totalMins+=(parseTS(punches[i+1].timestamp)-parseTS(punches[i].timestamp))/60000;i++;} }
-      });
-      summaryData.push([emp,fmtHM(totalMins),`R$ ${payByEmp[emp].toFixed(2)}`]);
-    });
-    summaryData.push([],['TOTAL GERAL','',`R$ ${payTotal.toFixed(2)}`]);
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    wsSummary['!cols'] = [{wch:30},{wch:15},{wch:20}];
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
-    const rows = buildReportRows(byEmp, payByEmp);
-    const detailData = [['Funcionário','Data','Entrada','Saída','Total','Tipo de Dia','Pagamento','Descrição','Corrigido']];
-    rows.forEach(r => detailData.push([r.emp,r.date,r.entrada,r.saida,r.total,r.tipo,r.pagamento,r.descricao,r.corrigido?'Sim':'']));
-    const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
-    wsDetail['!cols'] = [{wch:22},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:35},{wch:10}];
-    XLSX.utils.book_append_sheet(wb, wsDetail, 'Detalhado');
-    Object.keys(byEmp).sort().forEach(emp => {
-      const empData = [[`VICAF HYDRO — ${emp.toUpperCase()}`],[`Período: ${fromFmt} a ${toFmt}`],[],['Data','Entrada','Saída','Total','Tipo de Dia','Pagamento','Descrição','Corrigido']];
-      const empRows = buildReportRows({[emp]:byEmp[emp]}, payByEmp);
-      empRows.forEach(r => empData.push([r.date,r.entrada,r.saida,r.total,r.tipo,r.pagamento,r.descricao,r.corrigido?'Sim ✎':'']));
-      empData.push([],['TOTAL','','','','',`R$ ${payByEmp[emp].toFixed(2)}`]);
-      const wsEmp = XLSX.utils.aoa_to_sheet(empData);
-      wsEmp['!cols'] = [{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:35},{wch:10}];
-      XLSX.utils.book_append_sheet(wb, wsEmp, emp.split(' ')[0].substring(0,31));
-    });
-    XLSX.writeFile(wb, `vicaf-ponto-${from}-${to}${empFilter?'-'+empFilter.split(' ')[0]:''}.xlsx`);
-    toast('Excel baixado!','success');
-  };
-  document.head.appendChild(script);
-}
-
-function exportPDF() {
-  const data = window._lastReportData;
-  if (!data) return;
-  const { byEmp, payByEmp, payTotal, from, to, empFilter } = data;
-  const fromFmt = new Date(from+'T12:00:00').toLocaleDateString('pt-BR');
-  const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
-  const LOGO_SRC = 'data:image/png;base64,/9j/4AAQSkZJRgABAgAAAQABAAD';
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  script.onload = () => {
-    const { jsPDF } = window.jspdf;
-    const rows = buildReportRows(byEmp, payByEmp);
-    const empGroups = {};
-    rows.forEach(r => { if (!empGroups[r.emp]) empGroups[r.emp] = []; empGroups[r.emp].push(r); });
-    Object.keys(empGroups).sort().forEach(emp => {
-      const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-      const blue = [59,130,246], darkText = [15,23,42], midGray = [100,116,139], lightGray = [248,250,252];
-      const addPage = () => {
-        doc.setFillColor(255,255,255); doc.rect(0,0,W,26,'F');
-        doc.setFillColor(...blue); doc.rect(0,26,W,1.5,'F');
-        doc.setFontSize(8); doc.setTextColor(...darkText);
-        doc.text(`Período: ${fromFmt} a ${toFmt}`, W-14, 12, {align:'right'});
-        doc.setTextColor(...midGray);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, W-14, 19, {align:'right'});
-        doc.setDrawColor(200,210,220); doc.setLineWidth(0.3);
-        doc.line(14,H-10,W-14,H-10);
-        doc.setTextColor(150,165,180); doc.setFontSize(7);
-        doc.text('Vicaf Hydro — Documento confidencial',14,H-5);
-        doc.text(`Página ${doc.internal.getCurrentPageInfo().pageNumber}`,W-14,H-5,{align:'right'});
-      };
-      addPage();
-      let y = 36;
-      doc.setFillColor(...blue); doc.roundedRect(14,y,W-28,12,2,2,'F');
-      doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
-      doc.text(emp.toUpperCase(),20,y+8);
-      y += 18;
-      const cols = [14,60,82,104,126,142,168];
-      const headers = ['Data','Entrada','Saída','Total','Tipo','Pagamento','Descrição'];
-      const drawHeader = () => {
-        doc.setFillColor(59,130,246); doc.rect(14,y,W-28,7,'F');
-        doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-        headers.forEach((h,i) => doc.text(h,cols[i]+1,y+5));
-        y += 9;
-      };
-      drawHeader();
-      let totalMins = 0, totalRegular = 0, totalRegularOT = 0, totalSaturday = 0, totalSundayHoliday = 0, rowIdx = 0;
-      empGroups[emp].forEach(r => {
-        const rowH = r.descricao ? 12 : 8;
-        if (y + rowH > H-25) { doc.addPage(); addPage(); y=36; drawHeader(); rowIdx=0; }
-        if (rowIdx%2===0) { doc.setFillColor(...lightGray); doc.rect(14,y-1,W-28,rowH,'F'); }
-        if (r.tipo==='Licença Médica') doc.setTextColor(59,130,246);
-        else if (r.tipo==='Feriado') doc.setTextColor(239,68,68);
-        else if (r.tipo==='Sábado') doc.setTextColor(245,158,11);
-        else if (r.tipo==='Domingo') doc.setTextColor(249,115,22);
-        else doc.setTextColor(...darkText);
-        doc.setFontSize(7.5); doc.setFont('helvetica',r.corrigido?'italic':'normal');
-        doc.text(r.date.substring(0,22),cols[0],y+5);
-        doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-        doc.text(r.entrada,cols[1],y+5,{maxWidth:20}); doc.text(r.saida,cols[2],y+5,{maxWidth:20});
-        doc.setFont('helvetica','bold'); doc.text(r.total,cols[3],y+5);
-        doc.setFont('helvetica','normal'); doc.setFontSize(7);
-        doc.text(r.tipo,cols[4],y+5);
-        doc.setTextColor(...blue); doc.setFont('helvetica','bold');
-        doc.text(r.pagamento,cols[5],y+5);
-        doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-        if (r.descricao) {
-          doc.setFontSize(6.5); doc.setFont('helvetica','italic'); doc.setTextColor(90,100,115);
-          const wrapped = doc.splitTextToSize('Obs: ' + r.descricao, W-28-cols[6]+14-4);
-          doc.text(wrapped.slice(0,1), cols[6], y+5);
-          if (wrapped.length > 1) doc.text(wrapped.slice(1,2), 14, y+10);
-        }
-        totalMins += (r.regularMins||0) + (r.regularOTMins||0) + (r.saturdayMins||0) + (r.sundayHolidayMins||0);
-        totalRegular += r.regularMins||0; totalRegularOT += r.regularOTMins||0;
-        totalSaturday += r.saturdayMins||0; totalSundayHoliday += r.sundayHolidayMins||0;
-        y += rowH; rowIdx++;
-      });
-      y += 4;
-      if (y > H-58) { doc.addPage(); addPage(); y = 36; }
-      doc.setFillColor(240,247,255); doc.setDrawColor(...blue);
-      doc.roundedRect(14,y,W-28,38,2,2,'FD');
-      doc.setTextColor(...darkText); doc.setFontSize(8); doc.setFont('helvetica','bold');
-      doc.text('Resumo de horas do período',20,y+8);
-      doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-      doc.text('Horas regulares:',20,y+15);
-      doc.text('Hora extra regular (50%):',20,y+21);
-      doc.text('Hora extra sábado (50%):',20,y+27);
-      doc.text('Domingo/Feriado (100%):',20,y+33);
-      doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
-      doc.text(fmtHM(totalRegular),95,y+15);
-      doc.text(fmtHM(totalRegularOT),95,y+21);
-      doc.text(fmtHM(totalSaturday),95,y+27);
-      doc.text(fmtHM(totalSundayHoliday),95,y+33);
-      doc.setTextColor(...darkText); doc.setFont('helvetica','normal');
-      doc.text('Total de horas:',125,y+15);
-      doc.text('Pagamento estimado:',125,y+21);
-      doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
-      doc.text(fmtHM(totalMins),178,y+15);
-      doc.setFontSize(9);
-      doc.text(`R$ ${(payByEmp[emp]||0).toFixed(2)}`,178,y+21.5);
-      y += 46;
-      if (y > H-35) { doc.addPage(); addPage(); y = 40; }
-      doc.setDrawColor(180,195,210); doc.setLineWidth(0.3);
-      doc.line(14,y+10,90,y+10); doc.line(W-90,y+10,W-14,y+10);
-      doc.setTextColor(120,140,160); doc.setFontSize(7); doc.setFont('helvetica','normal');
-      doc.text('Assinatura do Funcionário',14,y+15);
-      doc.text('Assinatura do Supervisor',W-90,y+15);
-      doc.text(emp,14,y+20);
-      doc.save(`vicaf-ponto-${emp.split(' ')[0].toLowerCase()}-${from}-${to}.pdf`);
-    });
-    toast('PDF gerado!','success');
-  };
-  document.head.appendChild(script);
-}
-
-async function init() {
-  await loadEmployees();
-  buildEmpGrid();
-  setDefaultDates();
-  await loadTodayStatus();
-  await loadTodayLog(); // no filter on startup — shows empty state until PIN entered
-  setInterval(() => { if (selectedEmp) loadTodayLog(selectedEmp); }, 30000);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+// ── LOAD EXAMES ──
+async function loadExames(name) {
+  const area = document.getElementById('examesArea');
+  try {
+    const rows = await api('GET', `exames_funcionario?employee_name=eq.${encodeURIComponent(name)}&order=data_validade.asc&select=*`);
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty-docs">Nenhum exame cadastrado</div>';
+      return;
+    }
+    area.innerHTML = rows.map(r => `
+      <div class="doc-item" onclick="${isSupervisor ? `openEditExameModal('${r.id}')` : ''}">
+        <div class="doc-info">
+          <div class="doc-name">${r.tipo_exame}</div>
+          <div class="doc-dates">
+            ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
+            ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
+          </div>
+          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+        </div>
+        ${getStatusBadge(r.data_validade)}
+      </div>
+    `).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-docs">Erro ao carregar exames</div>';
   }
 }
-init();
 
-// ── SCROLL HIDE/SHOW NAV ──
-(function() {
-  let lastY = 0;
-  const nav = document.getElementById('bottomNav');
-  const main = document.querySelector('.main');
-  const onScroll = () => {
-    const y = main.scrollTop || window.scrollY;
-    if (y > lastY && y > 60) nav.classList.add('hidden');
-    else nav.classList.remove('hidden');
-    lastY = y;
+// ── LOAD NRs ──
+async function loadNRs(name) {
+  const area = document.getElementById('nrsArea');
+  try {
+    const rows = await api('GET', `nrs_funcionario?employee_name=eq.${encodeURIComponent(name)}&order=nr_codigo.asc&select=*`);
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty-docs">Nenhum treinamento NR cadastrado</div>';
+      return;
+    }
+    area.innerHTML = rows.map(r => `
+      <div class="doc-item" onclick="${isSupervisor ? `openEditNRModal('${r.id}')` : ''}">
+        <div class="doc-info">
+          <div class="doc-name">${r.nr_codigo}${r.nr_nome ? ' — ' + r.nr_nome : ''}</div>
+          <div class="doc-dates">
+            ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
+            ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
+          </div>
+          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+        </div>
+        ${getStatusBadge(r.data_validade)}
+      </div>
+    `).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-docs">Erro ao carregar NRs</div>';
+  }
+}
+
+// ── EDIT DADOS ──
+function openEditDadosModal() {
+  const p = currentPerfil || {};
+  document.getElementById('modalDadosTitle').textContent = `Editar — ${currentEmployee}`;
+  setVal('editCargo', p.cargo);
+  setVal('editAdmissao', p.data_admissao);
+  setVal('editTelefone', p.telefone);
+  setVal('editEmergNome', p.contato_emergencia_nome);
+  setVal('editEmergParentesco', p.contato_emergencia_parentesco);
+  setVal('editEmergTel', p.contato_emergencia_tel);
+  setVal('editEmergTel2', p.contato_emergencia_tel2);
+  setVal('editTipoSang', p.tipo_sanguineo);
+  setVal('editAlergias', p.alergias);
+  setVal('editCondicoes', p.condicoes_medicas);
+  setVal('editMedicamentos', p.medicamentos);
+  openModal('modalDados');
+}
+
+async function saveDados() {
+  const data = {
+    cargo: val('editCargo') || null,
+    data_admissao: val('editAdmissao') || null,
+    telefone: val('editTelefone') || null,
+    contato_emergencia_nome: val('editEmergNome') || null,
+    contato_emergencia_parentesco: val('editEmergParentesco') || null,
+    contato_emergencia_tel: val('editEmergTel') || null,
+    contato_emergencia_tel2: val('editEmergTel2') || null,
+    tipo_sanguineo: val('editTipoSang') || null,
+    alergias: val('editAlergias') || null,
+    condicoes_medicas: val('editCondicoes') || null,
+    medicamentos: val('editMedicamentos') || null,
+    updated_at: new Date().toISOString(),
+    updated_by: isSupervisor ? 'Supervisor' : currentEmployee
   };
-  main.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('scroll', onScroll, { passive: true });
-})();
+
+  try {
+    if (currentPerfil && currentPerfil.id) {
+      await fetch(`${SUPABASE_URL}/rest/v1/perfil_funcionario?id=eq.${currentPerfil.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'perfil_funcionario', { employee_name: currentEmployee, ...data });
+    }
+    toast('Dados salvos com sucesso', 'success');
+    closeModal('modalDados');
+    await loadPerfil(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar dados', 'error');
+  }
+}
+
+// ── ADD EXAME ──
+function openAddExameModal() {
+  currentExameId = null;
+  document.getElementById('modalExameTitle').textContent = 'Adicionar Exame';
+  setVal('editExameTipo', ''); setVal('editExameData', ''); setVal('editExameValidade', ''); setVal('editExameObs', '');
+  document.getElementById('btnDeleteExame').style.display = 'none';
+  openModal('modalExame');
+}
+
+function openEditExameModal(id) {
+  // Find from DOM data isn't practical — refetch
+  currentExameId = id;
+  api('GET', `exames_funcionario?id=eq.${id}&select=*`).then(rows => {
+    const r = rows[0]; if (!r) return;
+    document.getElementById('modalExameTitle').textContent = 'Editar Exame';
+    setVal('editExameTipo', r.tipo_exame);
+    setVal('editExameData', r.data_realizacao);
+    setVal('editExameValidade', r.data_validade);
+    setVal('editExameObs', r.observacao);
+    document.getElementById('btnDeleteExame').style.display = 'block';
+    openModal('modalExame');
+  });
+}
+
+async function saveExame() {
+  const tipo = val('editExameTipo');
+  if (!tipo) { toast('Informe o tipo de exame', 'error'); return; }
+  const data = {
+    employee_name: currentEmployee,
+    tipo_exame: tipo,
+    data_realizacao: val('editExameData') || null,
+    data_validade: val('editExameValidade') || null,
+    observacao: val('editExameObs') || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (currentExameId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/exames_funcionario?id=eq.${currentExameId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'exames_funcionario', data);
+    }
+    toast('Exame salvo', 'success');
+    closeModal('modalExame');
+    await loadExames(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar exame', 'error');
+  }
+}
+
+async function deleteExame() {
+  if (!currentExameId) return;
+  if (!confirm('Excluir este exame?')) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/exames_funcionario?id=eq.${currentExameId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    });
+    toast('Exame excluído', 'warn');
+    closeModal('modalExame');
+    await loadExames(currentEmployee);
+  } catch(e) {
+    toast('Erro ao excluir', 'error');
+  }
+}
+
+// ── ADD NR ──
+function openAddNRModal() {
+  currentNRId = null;
+  document.getElementById('modalNRTitle').textContent = 'Adicionar Treinamento NR';
+  setVal('editNRCodigo', ''); setVal('editNRNome', ''); setVal('editNRData', ''); setVal('editNRValidade', ''); setVal('editNRObs', '');
+  document.getElementById('btnDeleteNR').style.display = 'none';
+  openModal('modalNR');
+}
+
+function openEditNRModal(id) {
+  currentNRId = id;
+  api('GET', `nrs_funcionario?id=eq.${id}&select=*`).then(rows => {
+    const r = rows[0]; if (!r) return;
+    document.getElementById('modalNRTitle').textContent = 'Editar Treinamento NR';
+    setVal('editNRCodigo', r.nr_codigo);
+    setVal('editNRNome', r.nr_nome);
+    setVal('editNRData', r.data_realizacao);
+    setVal('editNRValidade', r.data_validade);
+    setVal('editNRObs', r.observacao);
+    document.getElementById('btnDeleteNR').style.display = 'block';
+    openModal('modalNR');
+  });
+}
+
+async function saveNR() {
+  const codigo = val('editNRCodigo');
+  if (!codigo) { toast('Informe o código da NR (ex: NR-10)', 'error'); return; }
+  const data = {
+    employee_name: currentEmployee,
+    nr_codigo: codigo.toUpperCase(),
+    nr_nome: val('editNRNome') || null,
+    data_realizacao: val('editNRData') || null,
+    data_validade: val('editNRValidade') || null,
+    observacao: val('editNRObs') || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (currentNRId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/nrs_funcionario?id=eq.${currentNRId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(data)
+      });
+    } else {
+      await api('POST', 'nrs_funcionario', data);
+    }
+    toast('NR salva', 'success');
+    closeModal('modalNR');
+    await loadNRs(currentEmployee);
+  } catch(e) {
+    toast('Erro ao salvar NR', 'error');
+  }
+}
+
+async function deleteNR() {
+  if (!currentNRId) return;
+  if (!confirm('Excluir este treinamento NR?')) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/nrs_funcionario?id=eq.${currentNRId}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    });
+    toast('NR excluída', 'warn');
+    closeModal('modalNR');
+    await loadNRs(currentEmployee);
+  } catch(e) {
+    toast('Erro ao excluir', 'error');
+  }
+}
+
+// ── INIT ──
+loadEmployees();
 </script>
 </body>
 </html>
