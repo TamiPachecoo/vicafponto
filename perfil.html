@@ -226,6 +226,35 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 /* ── LOADING ── */
 .loading { text-align: center; color: var(--text3); padding: 32px; font-size: 14px; }
 
+/* ── COMPLIANCE OVERVIEW (supervisor) ── */
+.overview-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  margin-bottom: 10px; cursor: pointer; transition: border-color .15s;
+  display: flex; align-items: center; gap: 14px;
+}
+.overview-card:hover { border-color: var(--accent); }
+.overview-card:active { transform: scale(0.99); }
+.overview-avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-dim); color: var(--accent);
+  font-weight: 600; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.overview-info { flex: 1; min-width: 0; }
+.overview-name { font-size: 14px; font-weight: 600; }
+.overview-cargo { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.overview-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ov-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 6px; white-space: nowrap;
+}
+.ov-ok      { background: var(--green-dim); color: var(--green); }
+.ov-warn    { background: var(--amber-dim); color: var(--amber); }
+.ov-expired { background: var(--red-dim);   color: var(--red);   }
+.ov-none    { background: var(--surface2);  color: var(--text3); }
+.overview-arrow { color: var(--text3); font-size: 18px; flex-shrink: 0; }
+
 /* ── BOTTOM NAV + PWD MODAL ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
@@ -291,6 +320,12 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <div class="section-label" id="selectLabel">Selecione seu nome</div>
     <div class="emp-grid" id="empGrid">
       <div class="loading">Carregando...</div>
+    </div>
+
+    <!-- COMPLIANCE OVERVIEW — only visible in supervisor mode -->
+    <div id="complianceSection" style="display:none">
+      <div class="section-label" style="margin-top:28px">📋 Situação de Documentos</div>
+      <div id="complianceArea"><div class="loading">Carregando...</div></div>
     </div>
   </div>
 
@@ -647,8 +682,8 @@ function showScreen(id) {
 function goBack() {
   currentEmployee = null;
   currentPerfil = null;
-  // In supervisor mode, show all; in employee mode, re-show selection
   showScreen('screenSelect');
+  if (isSupervisor) loadComplianceOverview();
 }
 
 // ── SUPERVISOR TOGGLE ──
@@ -658,6 +693,7 @@ function toggleSupervisor() {
     document.getElementById('modePill').textContent = '👤 Funcionário';
     document.getElementById('modePill').classList.remove('supervisor');
     document.getElementById('selectLabel').textContent = 'Selecione seu nome';
+    document.getElementById('complianceSection').style.display = 'none';
     goBack();
     return;
   }
@@ -666,10 +702,84 @@ function toggleSupervisor() {
     document.getElementById('modePill').textContent = '🔓 Supervisor';
     document.getElementById('modePill').classList.add('supervisor');
     document.getElementById('selectLabel').textContent = 'Selecione um funcionário';
+    document.getElementById('complianceSection').style.display = 'block';
     toast('Modo supervisor ativado', 'success');
     buildEmpGrid();
+    loadComplianceOverview();
     if (currentEmployee) openProfile(currentEmployee);
   });
+}
+
+// ── COMPLIANCE OVERVIEW ──
+async function loadComplianceOverview() {
+  const area = document.getElementById('complianceArea');
+  area.innerHTML = '<div class="loading">Carregando...</div>';
+  try {
+    const [exames, nrs, perfis] = await Promise.all([
+      api('GET', 'exames_funcionario?select=employee_name,data_validade'),
+      api('GET', 'nrs_funcionario?select=employee_name,data_validade'),
+      api('GET', 'perfil_funcionario?select=employee_name,cargo')
+    ]);
+
+    const cargoMap = {};
+    perfis.forEach(p => { cargoMap[p.employee_name] = p.cargo; });
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const in30 = new Date(today); in30.setDate(in30.getDate() + 30);
+
+    function getDocStatus(validade) {
+      if (!validade) return 'none';
+      const d = new Date(validade + 'T12:00:00');
+      if (d < today) return 'expired';
+      if (d <= in30)  return 'warn';
+      return 'ok';
+    }
+
+    // Group by employee
+    const empDocs = {};
+    allEmployees.forEach(name => { empDocs[name] = { exames: [], nrs: [] }; });
+
+    exames.forEach(e => {
+      if (empDocs[e.employee_name]) empDocs[e.employee_name].exames.push(getDocStatus(e.data_validade));
+    });
+    nrs.forEach(n => {
+      if (empDocs[n.employee_name]) empDocs[n.employee_name].nrs.push(getDocStatus(n.data_validade));
+    });
+
+    function worstStatus(statuses) {
+      if (!statuses.length) return 'none';
+      if (statuses.includes('expired')) return 'expired';
+      if (statuses.includes('warn'))    return 'warn';
+      return 'ok';
+    }
+
+    const badgeLabel = { ok: '✅ Em dia', warn: '⚠️ Vencendo', expired: '❌ Vencido', none: '— Sem registros' };
+    const badgeClass = { ok: 'ov-ok', warn: 'ov-warn', expired: 'ov-expired', none: 'ov-none' };
+
+    area.innerHTML = allEmployees.map(name => {
+      const docs = empDocs[name] || { exames: [], nrs: [] };
+      const exameStatus = worstStatus(docs.exames);
+      const nrStatus    = worstStatus(docs.nrs);
+      const overall     = worstStatus([exameStatus, nrStatus]);
+      const cargo       = cargoMap[name] || '';
+
+      return `<div class="overview-card" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
+        <div class="overview-avatar">${initials(name)}</div>
+        <div class="overview-info">
+          <div class="overview-name">${name}</div>
+          ${cargo ? `<div class="overview-cargo">${cargo}</div>` : ''}
+          <div class="overview-badges">
+            <span class="ov-badge ${badgeClass[exameStatus]}">Exames: ${badgeLabel[exameStatus]}</span>
+            <span class="ov-badge ${badgeClass[nrStatus]}">NRs: ${badgeLabel[nrStatus]}</span>
+          </div>
+        </div>
+        <div class="overview-arrow">›</div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    area.innerHTML = '<div class="loading">Erro ao carregar documentos</div>';
+  }
 }
 
 // ── EMPLOYEE GRID ──
