@@ -239,6 +239,34 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .pin-locked { font-size: 13px; color: var(--amber); margin-bottom: 8px; }
 .pin-cancel { font-size: 12px; color: var(--text3); cursor: pointer; padding: 8px; }
 .pin-cancel:hover { color: var(--text2); }
+
+/* ── PIN MANAGEMENT (Resumo) ── */
+.pin-manage-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; gap: 10px;
+}
+.pin-manage-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.pin-manage-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface2); color: var(--text2);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pin-manage-name { font-size: 13px; font-weight: 500; }
+.pin-manage-status { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pin-manage-status.has-pin { color: var(--green); }
+.pin-manage-status.no-pin { color: var(--amber); }
+.pin-manage-status.locked { color: var(--red); }
+.pin-reset-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 12px;
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  white-space: nowrap; transition: all .2s; flex-shrink: 0;
+}
+.pin-reset-btn:hover { border-color: var(--amber); color: var(--amber); }
 </style>
 </head>
 <body>
@@ -305,7 +333,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
       <div class="section-label">Solicitações pendentes</div>
       <div id="pendingList"><div class="loading">Carregando...</div></div>
     </div>
-    <div class="section-label" style="margin-top:24px">Período</div>
+
+    <!-- PIN MANAGEMENT -->
+    <div class="section-label" style="margin-top:24px">Gestão de PINs</div>
+    <div id="pinManageArea" style="margin-bottom:24px">
+      <div class="loading">Carregando...</div>
+    </div>
+
+    <div class="section-label">Período</div>
     <div class="filter-row">
       <input type="date" id="dateFrom" />
       <input type="date" id="dateTo" />
@@ -783,6 +818,70 @@ async function upsertLockout(name, attempts, lockedUntil) {
   });
 }
 
+// ── PIN MANAGEMENT (supervisor) ──
+async function loadPinManagement() {
+  const area = document.getElementById('pinManageArea');
+  try {
+    const [users, lockouts] = await Promise.all([
+      api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin'),
+      fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?select=employee_name,failed_attempts,locked_until`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      }).then(r => r.json())
+    ]);
+    const lockoutMap = {};
+    lockouts.forEach(l => { lockoutMap[l.employee_name] = l; });
+
+    area.innerHTML = users.map(u => {
+      const lockout = lockoutMap[u.full_name];
+      const isLocked = lockout?.locked_until && new Date(lockout.locked_until) > new Date();
+      let statusClass, statusText;
+      if (isLocked) {
+        const mins = Math.ceil((new Date(lockout.locked_until) - new Date()) / 60000);
+        statusClass = 'locked'; statusText = `🔒 Bloqueado — ${mins}min restantes`;
+      } else if (u.pin) {
+        statusClass = 'has-pin'; statusText = '✅ PIN cadastrado';
+      } else {
+        statusClass = 'no-pin'; statusText = '⚠️ Sem PIN — criará no primeiro acesso';
+      }
+      return `<div class="pin-manage-card">
+        <div class="pin-manage-info">
+          <div class="pin-manage-avatar">${initials(u.full_name)}</div>
+          <div>
+            <div class="pin-manage-name">${u.full_name}</div>
+            <div class="pin-manage-status ${statusClass}">${statusText}</div>
+          </div>
+        </div>
+        ${u.pin || isLocked ? `<button class="pin-reset-btn" onclick="resetPin('${u.full_name.replace(/'/g,"\\'")}')">Resetar PIN</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-state">Erro ao carregar PINs</div>';
+  }
+}
+
+async function resetPin(name) {
+  if (!confirm(`Resetar o PIN de ${name}?\n\nEle precisará criar um novo PIN no próximo acesso.`)) return;
+  try {
+    // Clear PIN in usuario table
+    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ pin: null })
+    });
+    // Clear lockout
+    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+    });
+    // Update local cache
+    employeePins[name] = null;
+    toast(`PIN de ${name} resetado`, 'success');
+    loadPinManagement();
+  } catch(e) {
+    toast('Erro ao resetar PIN', 'error');
+  }
+}
+
 function unlockEmployee(name) {
   selectedEmp = name;
   document.querySelectorAll('.emp-btn').forEach(b => b.classList.remove('selected'));
@@ -1071,6 +1170,7 @@ function switchTab(tab) {
     openPwdModal(() => {
       adminUnlocked = true;
       loadPendingRequests();
+      loadPinManagement();
       _activateTab('admin');
     });
     return;
