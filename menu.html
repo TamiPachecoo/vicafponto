@@ -37,12 +37,11 @@ body {
 /* ── LOGO ── */
 .logo-area { text-align: center; margin-bottom: 40px; }
 .logo-icon {
-  width: 72px; height: 72px; border-radius: 22px;
-  background: var(--accent-dim); border: 1px solid var(--accent);
-  display: flex; align-items: center; justify-content: center;
+  width: 88px; height: 88px; border-radius: 22px;
+  overflow: hidden;
   margin: 0 auto 16px;
 }
-.logo-icon svg { width: 40px; height: 40px; fill: var(--accent); }
+.logo-icon img { width: 100%; height: 100%; object-fit: cover; }
 .logo-title {
   font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
   color: var(--text);
@@ -124,7 +123,7 @@ body {
 <!-- Logo -->
 <div class="logo-area">
   <div class="logo-icon">
-    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+    <img src="icon-192.png" alt="Vicaf Hydro">
   </div>
   <div class="logo-title">Vicaf Hydro</div>
   <div class="logo-sub">Projetos e Consultoria</div>
