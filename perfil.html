@@ -491,17 +491,44 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <div class="modal-title" id="modalExameTitle">Exame Ocupacional</div>
 
     <div class="modal-label">Tipo de Exame</div>
-    <input type="text" id="editExameTipo" placeholder="Ex: ASO Periódico, Audiometria...">
+    <select id="editExameTipo" onchange="onExameTipoChange()">
+      <option value="">Selecione o tipo...</option>
+      <optgroup label="ASO">
+        <option value="ASO Admissional">ASO Admissional (sem validade)</option>
+        <option value="ASO Periódico">ASO Periódico (1 ano)</option>
+        <option value="ASO Demissional">ASO Demissional (sem validade)</option>
+      </optgroup>
+      <optgroup label="Outros exames">
+        <option value="Audiometria">Audiometria (1 ano)</option>
+        <option value="Acuidade Visual">Acuidade Visual (1 ano)</option>
+        <option value="Eletrocardiograma">Eletrocardiograma (1 ano)</option>
+        <option value="Espirometria">Espirometria (1 ano)</option>
+        <option value="Hemograma">Hemograma (1 ano)</option>
+        <option value="outro">Outro (informar manualmente)</option>
+      </optgroup>
+    </select>
+
+    <div id="exameOutroRow" style="display:none">
+      <div class="modal-label">Tipo personalizado</div>
+      <input type="text" id="editExameTipoManual" placeholder="Ex: Raio-X tórax">
+    </div>
 
     <div class="modal-row">
       <div>
         <div class="modal-label">Data de Realização</div>
-        <input type="date" id="editExameData">
+        <input type="date" id="editExameData" onchange="calcExameValidade()">
       </div>
       <div>
-        <div class="modal-label">Validade</div>
+        <div class="modal-label">
+          Validade
+          <span id="exameValidadeAuto" style="font-size:10px;color:var(--green);margin-left:4px;display:none">✨ automática</span>
+        </div>
         <input type="date" id="editExameValidade">
       </div>
+    </div>
+
+    <div id="exameValidadeHint" style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:12px;display:none">
+      Calculado automaticamente. Edite se necessário.
     </div>
 
     <div class="modal-label">Observação (opcional)</div>
@@ -525,6 +552,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <option value="NR-10 BRec">NR-10 BRec — Elétrica Básica (2 anos)</option>
       <option value="NR-10 BS40">NR-10 BS40 — Elétrica com SEP até 40kV (2 anos)</option>
       <option value="NR-10 SEP40">NR-10 SEP40 — Sistemas Elétricos de Potência (2 anos)</option>
+      <option value="NR-10 SEP REC">NR-10 SEP REC — SEP Reciclagem (2 anos)</option>
       <option value="NR-11">NR-11 — Movimentação de Cargas (2 anos)</option>
       <option value="NR-12">NR-12 — Máquinas e Equipamentos (2 anos)</option>
       <option value="NR-26">NR-26 — Sinalização de Segurança (2 anos)</option>
@@ -1000,39 +1028,122 @@ async function saveDados() {
   }
 }
 
+// ── EXAME VALIDITY MAP (months, null = no expiry) ──
+const EXAME_VALIDADE = {
+  'ASO Admissional':    null,
+  'ASO Periódico':      12,
+  'ASO Demissional':    null,
+  'Audiometria':        12,
+  'Acuidade Visual':    12,
+  'Eletrocardiograma':  12,
+  'Espirometria':       12,
+  'Hemograma':          12,
+};
+
+function onExameTipoChange() {
+  const sel = document.getElementById('editExameTipo').value;
+  document.getElementById('exameOutroRow').style.display = sel === 'outro' ? 'block' : 'none';
+  calcExameValidade();
+}
+
+function calcExameValidade() {
+  const sel = document.getElementById('editExameTipo').value;
+  const data = document.getElementById('editExameData').value;
+  const hint = document.getElementById('exameValidadeHint');
+  const badge = document.getElementById('exameValidadeAuto');
+
+  if (!data || !sel || sel === 'outro') {
+    hint.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  const months = EXAME_VALIDADE[sel];
+
+  if (months === null) {
+    // No expiry — clear validity field
+    document.getElementById('editExameValidade').value = '';
+    hint.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  if (months === undefined) {
+    hint.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  const emissao = new Date(data + 'T12:00:00');
+  const validade = new Date(emissao);
+  validade.setMonth(validade.getMonth() + months);
+  const yyyy = validade.getFullYear();
+  const mm = String(validade.getMonth() + 1).padStart(2, '0');
+  const dd = String(validade.getDate()).padStart(2, '0');
+  document.getElementById('editExameValidade').value = `${yyyy}-${mm}-${dd}`;
+  hint.style.display = 'block';
+  badge.style.display = 'inline';
+}
+
 // ── ADD EXAME ──
 function openAddExameModal() {
   currentExameId = null;
   document.getElementById('modalExameTitle').textContent = 'Adicionar Exame';
-  setVal('editExameTipo', ''); setVal('editExameData', ''); setVal('editExameValidade', ''); setVal('editExameObs', '');
+  document.getElementById('editExameTipo').value = '';
+  document.getElementById('editExameTipoManual').value = '';
+  document.getElementById('editExameData').value = '';
+  document.getElementById('editExameValidade').value = '';
+  document.getElementById('editExameObs').value = '';
+  document.getElementById('exameOutroRow').style.display = 'none';
+  document.getElementById('exameValidadeHint').style.display = 'none';
+  document.getElementById('exameValidadeAuto').style.display = 'none';
   document.getElementById('btnDeleteExame').style.display = 'none';
   openModal('modalExame');
 }
 
 function openEditExameModal(id) {
-  // Find from DOM data isn't practical — refetch
   currentExameId = id;
   api('GET', `exames_funcionario?id=eq.${id}&select=*`).then(rows => {
     const r = rows[0]; if (!r) return;
     document.getElementById('modalExameTitle').textContent = 'Editar Exame';
-    setVal('editExameTipo', r.tipo_exame);
-    setVal('editExameData', r.data_realizacao);
-    setVal('editExameValidade', r.data_validade);
-    setVal('editExameObs', r.observacao);
+
+    const knownTypes = Object.keys(EXAME_VALIDADE);
+    const sel = document.getElementById('editExameTipo');
+    if (knownTypes.includes(r.tipo_exame)) {
+      sel.value = r.tipo_exame;
+      document.getElementById('exameOutroRow').style.display = 'none';
+    } else {
+      sel.value = 'outro';
+      document.getElementById('exameOutroRow').style.display = 'block';
+      document.getElementById('editExameTipoManual').value = r.tipo_exame;
+    }
+
+    document.getElementById('editExameData').value = r.data_realizacao || '';
+    document.getElementById('editExameValidade').value = r.data_validade || '';
+    document.getElementById('editExameObs').value = r.observacao || '';
+    document.getElementById('exameValidadeHint').style.display = 'none';
+    document.getElementById('exameValidadeAuto').style.display = 'none';
     document.getElementById('btnDeleteExame').style.display = 'block';
     openModal('modalExame');
   });
 }
 
 async function saveExame() {
-  const tipo = val('editExameTipo');
+  const sel = document.getElementById('editExameTipo').value;
+  if (!sel) { toast('Selecione o tipo de exame', 'error'); return; }
+
+  const tipo = sel === 'outro'
+    ? (document.getElementById('editExameTipoManual').value.trim())
+    : sel;
+
   if (!tipo) { toast('Informe o tipo de exame', 'error'); return; }
+
   const data = {
     employee_name: currentEmployee,
     tipo_exame: tipo,
-    data_realizacao: val('editExameData') || null,
-    data_validade: val('editExameValidade') || null,
-    observacao: val('editExameObs') || null,
+    data_realizacao: document.getElementById('editExameData').value || null,
+    data_validade: document.getElementById('editExameValidade').value || null,
+    observacao: document.getElementById('editExameObs').value.trim() || null,
     updated_at: new Date().toISOString()
   };
   try {
@@ -1075,6 +1186,7 @@ const NR_VALIDADE = {
   'NR-10 BRec':               24,
   'NR-10 BS40':               24,
   'NR-10 SEP40':              24,
+  'NR-10 SEP REC':            24,
   'NR-11':                    24,
   'NR-12':                    24,
   'NR-26':                    24,
