@@ -518,26 +518,44 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <button class="modal-close" onclick="closeModal('modalNR')">✕</button>
     <div class="modal-title" id="modalNRTitle">Treinamento NR</div>
 
-    <div class="modal-row">
-      <div>
-        <div class="modal-label">Código NR</div>
-        <input type="text" id="editNRCodigo" placeholder="Ex: NR-10">
-      </div>
-      <div>
-        <div class="modal-label">Nome</div>
-        <input type="text" id="editNRNome" placeholder="Ex: Elétrica">
-      </div>
+    <div class="modal-label">Código NR</div>
+    <select id="editNRCodigo" onchange="onNRCodigoChange()">
+      <option value="">Selecione a NR...</option>
+      <option value="NR-06">NR-06 — EPI (2 anos)</option>
+      <option value="NR-10 BRec">NR-10 BRec — Elétrica Básica (2 anos)</option>
+      <option value="NR-10 BS40">NR-10 BS40 — Elétrica com SEP até 40kV (2 anos)</option>
+      <option value="NR-10 SEP40">NR-10 SEP40 — Sistemas Elétricos de Potência (2 anos)</option>
+      <option value="NR-11">NR-11 — Movimentação de Cargas (2 anos)</option>
+      <option value="NR-12">NR-12 — Máquinas e Equipamentos (2 anos)</option>
+      <option value="NR-26">NR-26 — Sinalização de Segurança (2 anos)</option>
+      <option value="NR-33">NR-33 — Espaço Confinado (1 ano)</option>
+      <option value="NR-34 Trabalho a Quente">NR-34 Trabalho a Quente — Solda/Maçarico (1 ano)</option>
+      <option value="NR-34 Máquinas Rotativas">NR-34 Máquinas Rotativas — Ferramentas rotativas (2 anos)</option>
+      <option value="NR-35">NR-35 — Trabalho em Altura (2 anos)</option>
+      <option value="outro">Outro (informar manualmente)</option>
+    </select>
+
+    <div id="nrOutroRow" style="display:none">
+      <div class="modal-label">Código personalizado</div>
+      <input type="text" id="editNRCodigoManual" placeholder="Ex: NR-13">
     </div>
 
     <div class="modal-row">
       <div>
         <div class="modal-label">Data de Realização</div>
-        <input type="date" id="editNRData">
+        <input type="date" id="editNRData" onchange="calcNRValidade()">
       </div>
       <div>
-        <div class="modal-label">Validade</div>
+        <div class="modal-label">
+          Validade
+          <span id="nrValidadeAuto" style="font-size:10px;color:var(--green);margin-left:4px;display:none">✨ automática</span>
+        </div>
         <input type="date" id="editNRValidade">
       </div>
+    </div>
+
+    <div id="nrValidadeHint" style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:12px;display:none">
+      Calculado automaticamente. Edite se o certificado tiver data diferente.
     </div>
 
     <div class="modal-label">Observação (opcional)</div>
@@ -1051,11 +1069,74 @@ async function deleteExame() {
   }
 }
 
+// ── NR VALIDITY MAP (months) ──
+const NR_VALIDADE = {
+  'NR-06':                    24,
+  'NR-10 BRec':               24,
+  'NR-10 BS40':               24,
+  'NR-10 SEP40':              24,
+  'NR-11':                    24,
+  'NR-12':                    24,
+  'NR-26':                    24,
+  'NR-33':                    12,
+  'NR-34 Trabalho a Quente':  12,
+  'NR-34 Máquinas Rotativas': 24,
+  'NR-35':                    24,
+};
+
+function onNRCodigoChange() {
+  const sel = document.getElementById('editNRCodigo').value;
+  const outroRow = document.getElementById('nrOutroRow');
+  outroRow.style.display = sel === 'outro' ? 'block' : 'none';
+  // Recalculate validity when code changes
+  calcNRValidade();
+}
+
+function calcNRValidade() {
+  const sel = document.getElementById('editNRCodigo').value;
+  const data = document.getElementById('editNRData').value;
+  const hint = document.getElementById('nrValidadeHint');
+  const badge = document.getElementById('nrValidadeAuto');
+
+  if (!data || !sel || sel === 'outro') {
+    hint.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  const months = NR_VALIDADE[sel];
+  if (!months) {
+    hint.style.display = 'none';
+    badge.style.display = 'none';
+    return;
+  }
+
+  // Calculate expiry date
+  const emissao = new Date(data + 'T12:00:00');
+  const validade = new Date(emissao);
+  validade.setMonth(validade.getMonth() + months);
+
+  const yyyy = validade.getFullYear();
+  const mm = String(validade.getMonth() + 1).padStart(2, '0');
+  const dd = String(validade.getDate()).padStart(2, '0');
+  document.getElementById('editNRValidade').value = `${yyyy}-${mm}-${dd}`;
+
+  hint.style.display = 'block';
+  badge.style.display = 'inline';
+}
+
 // ── ADD NR ──
 function openAddNRModal() {
   currentNRId = null;
   document.getElementById('modalNRTitle').textContent = 'Adicionar Treinamento NR';
-  setVal('editNRCodigo', ''); setVal('editNRNome', ''); setVal('editNRData', ''); setVal('editNRValidade', ''); setVal('editNRObs', '');
+  document.getElementById('editNRCodigo').value = '';
+  document.getElementById('editNRCodigoManual').value = '';
+  document.getElementById('editNRData').value = '';
+  document.getElementById('editNRValidade').value = '';
+  document.getElementById('editNRObs').value = '';
+  document.getElementById('nrOutroRow').style.display = 'none';
+  document.getElementById('nrValidadeHint').style.display = 'none';
+  document.getElementById('nrValidadeAuto').style.display = 'none';
   document.getElementById('btnDeleteNR').style.display = 'none';
   openModal('modalNR');
 }
@@ -1065,26 +1146,55 @@ function openEditNRModal(id) {
   api('GET', `nrs_funcionario?id=eq.${id}&select=*`).then(rows => {
     const r = rows[0]; if (!r) return;
     document.getElementById('modalNRTitle').textContent = 'Editar Treinamento NR';
-    setVal('editNRCodigo', r.nr_codigo);
-    setVal('editNRNome', r.nr_nome);
-    setVal('editNRData', r.data_realizacao);
-    setVal('editNRValidade', r.data_validade);
-    setVal('editNRObs', r.observacao);
+
+    // Check if code matches known NRs
+    const knownCodes = Object.keys(NR_VALIDADE);
+    const isKnown = knownCodes.includes(r.nr_codigo);
+
+    const sel = document.getElementById('editNRCodigo');
+    if (isKnown) {
+      sel.value = r.nr_codigo;
+      document.getElementById('nrOutroRow').style.display = 'none';
+    } else {
+      sel.value = 'outro';
+      document.getElementById('nrOutroRow').style.display = 'block';
+      document.getElementById('editNRCodigoManual').value = r.nr_codigo;
+    }
+
+    document.getElementById('editNRData').value = r.data_realizacao || '';
+    document.getElementById('editNRValidade').value = r.data_validade || '';
+    document.getElementById('editNRObs').value = r.observacao || '';
+    document.getElementById('nrValidadeHint').style.display = 'none';
+    document.getElementById('nrValidadeAuto').style.display = 'none';
     document.getElementById('btnDeleteNR').style.display = 'block';
     openModal('modalNR');
   });
 }
 
 async function saveNR() {
-  const codigo = val('editNRCodigo');
-  if (!codigo) { toast('Informe o código da NR (ex: NR-10)', 'error'); return; }
+  const sel = document.getElementById('editNRCodigo').value;
+  if (!sel) { toast('Selecione a NR', 'error'); return; }
+
+  const codigo = sel === 'outro'
+    ? (document.getElementById('editNRCodigoManual').value.trim().toUpperCase())
+    : sel;
+
+  if (!codigo) { toast('Informe o código da NR', 'error'); return; }
+
+  // Get nr_nome from the select label
+  const selectEl = document.getElementById('editNRCodigo');
+  const selectedOption = selectEl.options[selectEl.selectedIndex];
+  const nr_nome = sel === 'outro'
+    ? null
+    : (selectedOption.text.split('—')[1]?.split('(')[0]?.trim() || null);
+
   const data = {
     employee_name: currentEmployee,
-    nr_codigo: codigo.toUpperCase(),
-    nr_nome: val('editNRNome') || null,
-    data_realizacao: val('editNRData') || null,
-    data_validade: val('editNRValidade') || null,
-    observacao: val('editNRObs') || null,
+    nr_codigo: codigo,
+    nr_nome: nr_nome,
+    data_realizacao: document.getElementById('editNRData').value || null,
+    data_validade: document.getElementById('editNRValidade').value || null,
+    observacao: document.getElementById('editNRObs').value.trim() || null,
     updated_at: new Date().toISOString()
   };
   try {
