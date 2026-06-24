@@ -606,7 +606,7 @@ async function loadTodayLog(empFilter) {
   const today = getLocalDate();
   const logEl = document.getElementById('todayLog');
   try {
-    let query = `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected`;
+    let query = `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected,correction_note`;
     if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const rows = await api('GET', query);
     if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
@@ -615,6 +615,7 @@ async function loadTodayLog(empFilter) {
       const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
       const corrBadge = r.is_corrected ? '<span class="log-corrected-badge">corrigido</span>' : '';
       const noteHtml = r.notes ? `<div class="log-note">📝 ${r.notes}</div>` : '';
+      const corrNoteHtml = r.correction_note ? `<div class="log-note" style="color:var(--amber)">✎ ${r.correction_note}</div>` : '';
       return `<div class="log-item">
         <div class="log-item-row">
           <div class="log-left">
@@ -622,7 +623,7 @@ async function loadTodayLog(empFilter) {
             <div><div class="log-type">${typeLabel}${corrBadge}</div><div class="log-emp">${r.employee}</div></div>
           </div>
           <div class="log-time">${t}</div>
-        </div>${noteHtml}
+        </div>${noteHtml}${corrNoteHtml}
       </div>`;
     }).join('') + '</div>';
   } catch(e) { logEl.innerHTML = '<div class="empty-state">Erro ao carregar registros</div>'; }
@@ -1047,15 +1048,29 @@ function openApproveModal(id, emp, date, type, requestedTime) {
   openModal('approveModal');
 }
 
+// ── TIMEZONE HELPER ──
+// Always build timestamps in Brazil local time (UTC-3) to avoid drift
+function buildBrazilTimestamp(date, time) {
+  // date = 'YYYY-MM-DD', time = 'HH:MM'
+  // Append Brazil offset explicitly: UTC-3 = +03:00 subtracted
+  return `${date}T${time}:00.000-03:00`;
+}
+
 async function approveCorrection() {
   const time = document.getElementById('approveTime').value;
   const date = document.getElementById('approveDate').value;
   if (!time || !date) { toast('Preencha data e horário','error'); return; }
   const req = pendingCorrections.find(c => c.id === currentCorrectionId);
   if (!req) return;
-  const timestamp = new Date(date + 'T' + time + ':00').toISOString();
+  // Fix: use Brazil local time explicitly
+  const timestamp = buildBrazilTimestamp(date, time);
   try {
-    await api('POST', 'time_logs', { employee: req.employee, type: req.type, timestamp, date, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() });
+    await api('POST', 'time_logs', {
+      employee: req.employee, type: req.type, timestamp, date,
+      is_corrected: true, corrected_by: 'Supervisor',
+      corrected_at: new Date().toISOString(),
+      correction_note: `Correção aprovada — horário solicitado: ${req.requested_time}${req.note ? ' · Motivo: ' + req.note : ''}`
+    });
     await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + currentCorrectionId, {
       method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ status: 'approved' })
@@ -1095,6 +1110,7 @@ function openEditDayModal(employee, date) {
     id: p.id || null,
     type: p.type,
     time: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
+    originalTime: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
     isNew: false, deleted: false
   }));
   const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
@@ -1140,7 +1156,10 @@ async function saveEditDay() {
   }
   try {
     for (const r of editDayRows) {
-      const timestamp = new Date(date + 'T' + r.time + ':00').toISOString();
+      // Fix: build timestamp in Brazil local time (UTC-3) to avoid timezone drift
+      const timestamp = buildBrazilTimestamp(date, r.time);
+      const originalTime = r.originalTime || null;
+
       if (r.deleted && r.id) {
         await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
           method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
@@ -1151,10 +1170,22 @@ async function saveEditDay() {
         await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ type: r.type, timestamp, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() })
+          body: JSON.stringify({
+            type: r.type,
+            timestamp,
+            is_corrected: true,
+            corrected_by: 'Supervisor',
+            corrected_at: new Date().toISOString(),
+            correction_note: originalTime ? `Horário alterado de ${originalTime} para ${r.time}` : null
+          })
         });
       } else {
-        await api('POST', 'time_logs', { employee, type: r.type, timestamp, date, is_corrected: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() });
+        await api('POST', 'time_logs', {
+          employee, type: r.type, timestamp, date,
+          is_corrected: true, corrected_by: 'Supervisor',
+          corrected_at: new Date().toISOString(),
+          correction_note: `Registro adicionado pelo supervisor`
+        });
       }
     }
     toast('Registros do dia atualizados','success');
@@ -1198,13 +1229,38 @@ async function loadSummary() {
   const area = document.getElementById('summaryArea');
   area.innerHTML = '<div class="loading">Calculando...</div>';
   try {
-    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected`;
+    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected,correction_note`;
     if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const rows = await api('GET', query);
+
     let medQuery = `atestado_medico?date=gte.${from}&date=lte.${to}&select=employee,date,note`;
     if (empFilter) medQuery += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const medRows = await api('GET', medQuery);
+
+    // Fetch feriados for the period (nacional + estadual MG + municipal Juatuba)
+    const feriadosRows = await api('GET',
+      `feriados?data=gte.${from}&data=lte.${to}&select=data,nome,tipo,cidade,estado`
+    );
+    // Build a Set of holiday dates valid for Juatuba/MG
+    const feriadosSet = new Set();
+    const feriadosNomes = {};
+    feriadosRows.forEach(f => {
+      // Include: nacional, estadual MG, municipal Juatuba — exclude other states
+      const valid = !f.estado || f.estado === 'MG' || (f.cidade === 'Juatuba');
+      const notOtherCity = !f.cidade || f.cidade === 'Juatuba';
+      if (valid && notOtherCity) {
+        feriadosSet.add(f.data);
+        feriadosNomes[f.data] = f.nome;
+      }
+    });
+
+    // Fetch regime info for CLT employees
+    const usuarioRows = await api('GET', 'usuario?status=eq.active&select=full_name,regime,overtime_threshold_hours');
+    const regimeMap = {};
+    usuarioRows.forEach(u => { regimeMap[u.full_name] = u.regime || 'clt'; });
+
     if (!rows.length && !medRows.length) { area.innerHTML = '<div class="empty-state">Nenhum registro no período</div>'; return; }
+
     const byEmp = {};
     rows.forEach(r => {
       if (!byEmp[r.employee]) byEmp[r.employee] = { punches: {}, notes: {} };
@@ -1216,25 +1272,73 @@ async function loadSummary() {
       if (!byEmp[m.employee]) byEmp[m.employee] = { punches: {}, notes: {} };
       if (!byEmp[m.employee].punches[m.date]) byEmp[m.employee].punches[m.date] = [{ type: 'medical', medical_note: m.note }];
     });
+
+    // For CLT employees: add holiday pay rows for holidays they didn't work
+    Object.keys(byEmp).forEach(emp => {
+      if (regimeMap[emp] !== 'clt') return;
+      feriadosSet.forEach(fDate => {
+        // Only within selected period
+        if (fDate < from || fDate > to) return;
+        // If they already have a punch on this day, skip (worked = gets 100% rate as usual)
+        if (byEmp[emp].punches[fDate]) return;
+        // Check it's a weekday (Mon-Fri) — holidays on weekends don't generate extra pay
+        const dow = new Date(fDate + 'T12:00:00').getDay();
+        if (dow === 0 || dow === 6) return;
+        // Add a synthetic "holiday pay" entry
+        byEmp[emp].punches[fDate] = [{ type: 'holiday_pay', holiday_name: feriadosNomes[fDate] }];
+      });
+    });
+
     Object.keys(byEmp).forEach(emp => {
       Object.keys(byEmp[emp].punches).forEach(date => {
         byEmp[emp].punches[date].sort((a,b) => parseTS(a.timestamp) - parseTS(b.timestamp));
       });
     });
+
     let html = '';
     const payByEmp = {};
+
     Object.keys(byEmp).sort().forEach(emp => {
       let empTotalMins = 0, empPayTotal = 0, detailRows = '';
       let empRegularMins = 0, empRegularOTMins = 0, empSaturdayMins = 0, empSundayHolidayMins = 0;
+      let empHolidayPayMins = 0, empHolidayPayTotal = 0;
       const rates = hourlyRates[emp] || {};
+      const isCLT = regimeMap[emp] === 'clt';
+
       Object.keys(byEmp[emp].punches).sort().forEach(date => {
         const punches = byEmp[emp].punches[date];
         const dayNote = byEmp[emp].notes[date] || '';
+        const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+
+        // ── LICENÇA MÉDICA ──
         if (punches[0] && punches[0].type === 'medical') {
-          const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
           detailRows += `<div class="summary-row"><div><div style="font-size:13px">🏥 ${ds}</div><div class="sum-note">Licença médica${punches[0].medical_note?': '+punches[0].medical_note:''}</div></div><div style="text-align:right"><div class="sum-hours" style="font-size:13px">—</div></div></div>`;
           return;
         }
+
+        // ── FERIADO NÃO TRABALHADO (CLT) ──
+        if (punches[0] && punches[0].type === 'holiday_pay') {
+          const holidayMins = 9 * 60; // 9h regulares
+          const holidayPay = (holidayMins / 60) * (rates.regular || 0);
+          empHolidayPayMins += holidayMins;
+          empHolidayPayTotal += holidayPay;
+          empTotalMins += holidayMins;
+          empPayTotal += holidayPay;
+          empRegularMins += holidayMins;
+          detailRows += `<div class="summary-row">
+            <div>
+              <div style="font-size:13px">🏖️ ${ds}</div>
+              <div class="sum-note">${punches[0].holiday_name} — Feriado CLT (9h pagas)</div>
+            </div>
+            <div style="text-align:right">
+              <div class="sum-hours" style="font-size:13px;color:var(--amber)">${fmtHM(holidayMins)}</div>
+              <div style="font-size:11px;color:var(--text3)">R$ ${holidayPay.toFixed(2)}</div>
+            </div>
+          </div>`;
+          return;
+        }
+
+        // ── DIA NORMAL (trabalhado) ──
         let mins = 0;
         for (let i = 0; i < punches.length - 1; i++) {
           if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
@@ -1247,6 +1351,7 @@ async function loadSummary() {
         const threshold = rates.overtimeThreshold || 8;
         const satThreshold = rates.saturdayThreshold || 4;
         let pay = 0, regularMinsDay = 0, regularOTMinsDay = 0, saturdayMinsDay = 0, sundayHolidayMinsDay = 0;
+
         if (tipoDia === 'feriado' || tipoDia === 'domingo') {
           sundayHolidayMinsDay = mins;
           pay = hrs * (rates.holiday || rates.sunday || rates.regular || 0);
@@ -1259,10 +1364,11 @@ async function loadSummary() {
           regularOTMinsDay = Math.max(0, mins - threshold*60);
           pay = (regularMinsDay/60*(rates.regular||0)) + (regularOTMinsDay/60*(rates.overtime||0));
         }
+
         empTotalMins += mins; empPayTotal += pay;
         empRegularMins += regularMinsDay; empRegularOTMins += regularOTMinsDay;
         empSaturdayMins += saturdayMinsDay; empSundayHolidayMins += sundayHolidayMinsDay;
-        const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+
         const tipoBadge = tipoDia==='feriado'?'🔴':tipoDia==='sabado'?'🟡':tipoDia==='domingo'?'🟠':'🟢';
         const hasCorrected = punches.some(p => p.is_corrected);
         detailRows += `<div class="summary-row summary-row-clickable" onclick="openEditDayModal('${emp.replace(/'/g,"\\'")}','${date}')">
@@ -1276,16 +1382,30 @@ async function loadSummary() {
           </div>
         </div>`;
       });
+
       payByEmp[emp] = empPayTotal;
-      html += `<div class="summary-card"><div class="summary-header" style="display:flex;justify-content:space-between;align-items:center"><span>${emp}</span><span style="color:var(--accent)">${fmtHM(empTotalMins)}</span></div>
+
+      // Hours breakdown chips
+      const holidayChip = empHolidayPayMins > 0
+        ? `<span class="hours-chip" style="color:var(--amber)">🏖️ Feriado CLT: ${fmtHM(empHolidayPayMins)}</span>`
+        : '';
+
+      html += `<div class="summary-card">
+        <div class="summary-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span>${emp}${isCLT?' <span style="font-size:10px;color:var(--green);font-weight:400">CLT</span>':''}</span>
+          <span style="color:var(--accent)">${fmtHM(empTotalMins)}</span>
+        </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border)" class="hours-breakdown">
           <span class="hours-chip">Horas regulares: ${fmtHM(empRegularMins)}</span>
           <span class="hours-chip">Hora extra regular (50%): ${fmtHM(empRegularOTMins)}</span>
           <span class="hours-chip">Hora extra sábado (50%): ${fmtHM(empSaturdayMins)}</span>
           <span class="hours-chip">Domingo/Feriado (100%): ${fmtHM(empSundayHolidayMins)}</span>
+          ${holidayChip}
         </div>
-        ${detailRows}</div>`;
+        ${detailRows}
+      </div>`;
     });
+
     let payTotal = 0, payRows = '';
     Object.keys(payByEmp).sort().forEach(emp => {
       payTotal += payByEmp[emp];
@@ -1300,11 +1420,11 @@ async function loadSummary() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>PDF
       </button>
     </div>`;
+
     area.innerHTML = html;
     window._lastReportData = { byEmp, payByEmp, payTotal, from, to, empFilter };
   } catch(e) { area.innerHTML = '<div class="empty-state">Erro ao carregar dados</div>'; console.error(e); }
 }
-
 function buildReportRows(byEmp, payByEmp) {
   const allRows = [];
   Object.keys(byEmp).sort().forEach(emp => {
@@ -1314,6 +1434,14 @@ function buildReportRows(byEmp, payByEmp) {
       const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
       if (punches[0] && punches[0].type === 'medical') {
         allRows.push({ emp, date: ds, entrada:'—', saida:'—', total:'—', pagamento:'—', tipo:'Licença Médica', descricao: punches[0].medical_note||'', corrigido: false });
+        return;
+      }
+      // Holiday pay (CLT employee, didn't work)
+      if (punches[0] && punches[0].type === 'holiday_pay') {
+        const holidayMins = 9 * 60;
+        const rates = hourlyRates[emp] || {};
+        const pay = (holidayMins/60) * (rates.regular||0);
+        allRows.push({ emp, date: ds, entrada:'—', saida:'—', total: fmtHM(holidayMins), pagamento: `R$ ${pay.toFixed(2)}`, tipo:'Feriado CLT', descricao: punches[0].holiday_name||'', corrigido: false, regularMins: holidayMins, regularOTMins:0, saturdayMins:0, sundayHolidayMins:0 });
         return;
       }
       let mins = 0, corrected = false;
