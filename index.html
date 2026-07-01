@@ -170,7 +170,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .nav-item.active { color: var(--accent); }
 .nav-item:active { transform: scale(0.95); }
 
-/* ── PASSWORD MODAL (replaces prompt()) ── */
+/* ── PASSWORD MODAL ── */
 .pwd-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.75);
   display: flex; align-items: center; justify-content: center;
@@ -216,7 +216,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   margin: 0 auto 12px;
 }
 .pin-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.pin-subtitle { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+.pin-subtitle { font-size: 12px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
 .pin-dots { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
 .pin-dot {
   width: 16px; height: 16px; border-radius: 50%;
@@ -236,7 +236,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .pin-key.del { font-size: 16px; color: var(--text2); }
 .pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
 .pin-error { font-size: 12px; color: var(--red); min-height: 18px; margin-bottom: 8px; }
-.pin-locked { font-size: 13px; color: var(--amber); margin-bottom: 8px; }
 .pin-cancel { font-size: 12px; color: var(--text3); cursor: pointer; padding: 8px; }
 .pin-cancel:hover { color: var(--text2); }
 
@@ -406,7 +405,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </div>
 
-<!-- PASSWORD MODAL (replaces prompt() for PWA compatibility) -->
+<!-- PASSWORD MODAL -->
 <div class="pwd-overlay" id="pwdOverlay">
   <div class="pwd-box">
     <div class="pwd-title">🔒 Acesso ao Resumo</div>
@@ -478,9 +477,15 @@ let pendingCorrections = [], currentCorrectionId = null;
 let editDayContext = null;
 let editDayRows = [];
 let adminUnlocked = false;
-let pendingTabAction = null; // callback after password confirmed
+let pendingTabAction = null;
 
-// ── PASSWORD MODAL (PWA-safe replacement for prompt()) ──
+// ── HELPER: check if a PIN value is actually set ──
+// Treats null, undefined, and empty string as "no PIN"
+function pinIsSet(val) {
+  return val !== null && val !== undefined && val !== '';
+}
+
+// ── PASSWORD MODAL ──
 function openPwdModal(onSuccess) {
   pendingTabAction = onSuccess;
   document.getElementById('pwdInput').value = '';
@@ -562,7 +567,8 @@ async function loadEmployees() {
     const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
     EMPLOYEES = rows.map(r => r.full_name);
     rows.forEach(r => {
-      employeePins[r.full_name] = r.pin || null;
+      // Store pin exactly as returned — pinIsSet() handles null/empty checks everywhere
+      employeePins[r.full_name] = r.pin ?? null;
       hourlyRates[r.full_name] = {
         regular: r.regular_hourly_rate||0, overtime: r.overtime_rate||0,
         weekend: r.weekend_rate||0, saturday: r.saturday_rate||0,
@@ -630,7 +636,6 @@ async function loadTodayLog(empFilter) {
 }
 
 function selectEmp(name) {
-  // Check lockout first
   openPinModal(name);
 }
 
@@ -640,7 +645,7 @@ let pinMode = 'verify'; // 'verify' | 'create' | 'confirm'
 let pinCreateFirst = '';
 let pinTargetEmp = '';
 
-function openPinModal(name) {
+async function openPinModal(name) {
   pinTargetEmp = name;
   pinBuffer = '';
   pinCreateFirst = '';
@@ -648,18 +653,47 @@ function openPinModal(name) {
   document.getElementById('pinName').textContent = name;
   document.getElementById('pinError').textContent = '';
   document.getElementById('pinOverlay').classList.add('show');
-
-  const hasPin = !!employeePins[name];
-  if (hasPin) {
-    pinMode = 'verify';
-    document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
-    checkLockout(name);
-  } else {
-    pinMode = 'create';
-    document.getElementById('pinSubtitle').innerHTML = 'Primeiro acesso! Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
-    enableKeypad(true);
-  }
   updatePinDots();
+
+  // ── ALWAYS re-fetch the PIN from DB to avoid stale cache issues ──
+  // This is what was causing "first time" prompts for users who already had a PIN:
+  // the local cache could be out of date or contain an empty string instead of null.
+  try {
+    const rows = await fetch(
+      `${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}&select=pin`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+    ).then(r => r.json());
+
+    const freshPin = rows[0]?.pin ?? null;
+    // Update local cache with fresh value
+    employeePins[name] = freshPin;
+
+    if (pinIsSet(freshPin)) {
+      pinMode = 'verify';
+      document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
+      checkLockout(name);
+    } else {
+      pinMode = 'create';
+      document.getElementById('pinSubtitle').innerHTML =
+        'Primeiro acesso! Crie um PIN de 4 dígitos.<br>' +
+        '<span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+      enableKeypad(true);
+    }
+  } catch(e) {
+    // On fetch error, fall back to cached value
+    const cachedPin = employeePins[name] ?? null;
+    if (pinIsSet(cachedPin)) {
+      pinMode = 'verify';
+      document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
+      checkLockout(name);
+    } else {
+      pinMode = 'create';
+      document.getElementById('pinSubtitle').innerHTML =
+        'Primeiro acesso! Crie um PIN de 4 dígitos.<br>' +
+        '<span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+      enableKeypad(true);
+    }
+  }
 }
 
 function closePinModal() {
@@ -678,9 +712,8 @@ async function checkLockout(name) {
     const row = rows[0];
     if (row && row.locked_until) {
       const until = new Date(row.locked_until);
-      const now = new Date();
-      if (until > now) {
-        const mins = Math.ceil((until - now) / 60000);
+      if (until > new Date()) {
+        const mins = Math.ceil((until - new Date()) / 60000);
         document.getElementById('pinError').textContent = `🔒 Bloqueado por mais ${mins} min`;
         enableKeypad(false);
         return;
@@ -722,24 +755,31 @@ function updatePinDots(state = 'normal') {
 
 async function handlePinComplete() {
   if (pinMode === 'create') {
+    // First entry: store it and ask for confirmation
     pinCreateFirst = pinBuffer;
     pinBuffer = '';
     pinMode = 'confirm';
-    document.getElementById('pinSubtitle').innerHTML = 'Digite o PIN novamente para confirmar';
+    document.getElementById('pinSubtitle').textContent = 'Digite o PIN novamente para confirmar';
     document.getElementById('pinError').textContent = '';
     updatePinDots();
 
   } else if (pinMode === 'confirm') {
     if (pinBuffer !== pinCreateFirst) {
+      // Mismatch: restart from scratch
       document.getElementById('pinError').textContent = 'Os PINs não coincidem. Comece novamente.';
       updatePinDots('error');
-      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 800);
-      pinMode = 'create';
-      pinCreateFirst = '';
-      document.getElementById('pinSubtitle').innerHTML = 'Crie um PIN de 4 dígitos.<br><span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+      setTimeout(() => {
+        pinBuffer = '';
+        pinCreateFirst = '';
+        pinMode = 'create';
+        document.getElementById('pinSubtitle').innerHTML =
+          'Crie um PIN de 4 dígitos.<br>' +
+          '<span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
+        updatePinDots();
+      }, 900);
       return;
     }
-    // Save PIN
+    // Match: save it
     await savePinToSupabase(pinTargetEmp, pinBuffer);
 
   } else if (pinMode === 'verify') {
@@ -751,11 +791,14 @@ async function savePinToSupabase(name, pin) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: {
+        'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
       body: JSON.stringify({ pin })
     });
     employeePins[name] = pin;
-    toast('PIN criado com sucesso!', 'success');
+    toast('PIN criado com sucesso! ✅', 'success');
     closePinModal();
     unlockEmployee(name);
   } catch(e) {
@@ -767,7 +810,7 @@ async function savePinToSupabase(name, pin) {
 
 async function verifyPin(name, entered) {
   if (entered === employeePins[name]) {
-    // Clear lockout
+    // Correct — clear lockout record and proceed
     await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
       method: 'DELETE',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
@@ -775,7 +818,6 @@ async function verifyPin(name, entered) {
     closePinModal();
     unlockEmployee(name);
   } else {
-    // Wrong PIN
     updatePinDots('error');
     await registerFailedAttempt(name);
     setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
@@ -784,7 +826,6 @@ async function verifyPin(name, entered) {
 
 async function registerFailedAttempt(name) {
   try {
-    // Get current record
     const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
     }).then(r => r.json());
@@ -795,8 +836,7 @@ async function registerFailedAttempt(name) {
     if (attempts >= 3) {
       const lockedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
       await upsertLockout(name, attempts, lockedUntil);
-      const mins = 5;
-      document.getElementById('pinError').textContent = `🔒 Bloqueado por ${mins} minutos`;
+      document.getElementById('pinError').textContent = `🔒 Bloqueado por 5 minutos`;
       enableKeypad(false);
     } else {
       await upsertLockout(name, attempts, null);
@@ -829,21 +869,28 @@ async function loadPinManagement() {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       }).then(r => r.json())
     ]);
+
+    // Also refresh local PIN cache while we're at it
+    users.forEach(u => { employeePins[u.full_name] = u.pin ?? null; });
+
     const lockoutMap = {};
     lockouts.forEach(l => { lockoutMap[l.employee_name] = l; });
 
     area.innerHTML = users.map(u => {
       const lockout = lockoutMap[u.full_name];
       const isLocked = lockout?.locked_until && new Date(lockout.locked_until) > new Date();
+      // Use pinIsSet() for consistent null/empty detection
+      const hasPin = pinIsSet(u.pin);
       let statusClass, statusText;
       if (isLocked) {
         const mins = Math.ceil((new Date(lockout.locked_until) - new Date()) / 60000);
         statusClass = 'locked'; statusText = `🔒 Bloqueado — ${mins}min restantes`;
-      } else if (u.pin) {
+      } else if (hasPin) {
         statusClass = 'has-pin'; statusText = '✅ PIN cadastrado';
       } else {
         statusClass = 'no-pin'; statusText = '⚠️ Sem PIN — criará no primeiro acesso';
       }
+      const showResetBtn = hasPin || isLocked;
       return `<div class="pin-manage-card">
         <div class="pin-manage-info">
           <div class="pin-manage-avatar">${initials(u.full_name)}</div>
@@ -852,7 +899,7 @@ async function loadPinManagement() {
             <div class="pin-manage-status ${statusClass}">${statusText}</div>
           </div>
         </div>
-        ${u.pin || isLocked ? `<button class="pin-reset-btn" onclick="resetPin('${u.full_name.replace(/'/g,"\\'")}')">Resetar PIN</button>` : ''}
+        ${showResetBtn ? `<button class="pin-reset-btn" onclick="resetPin('${u.full_name.replace(/'/g,"\\'")}')">Resetar PIN</button>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -863,18 +910,15 @@ async function loadPinManagement() {
 async function resetPin(name) {
   if (!confirm(`Resetar o PIN de ${name}?\n\nEle precisará criar um novo PIN no próximo acesso.`)) return;
   try {
-    // Clear PIN in usuario table
     await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ pin: null })
     });
-    // Clear lockout
     await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
       method: 'DELETE',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
     });
-    // Update local cache
     employeePins[name] = null;
     toast(`PIN de ${name} resetado`, 'success');
     loadPinManagement();
@@ -943,7 +987,7 @@ async function doPunch() {
     btn.style.opacity = '0.5';
     await api('POST', 'time_logs', { employee: selectedEmp, type, timestamp: new Date().toISOString(), date: today, notes: note||null });
     toast(`${type==='clock_in'?'Entrada':'Saída'} registrada — ${selectedEmp}`, 'success');
-    await Promise.all([loadTodayStatus(), updatePunchBtn(), loadTodayLog()]);
+    await Promise.all([loadTodayStatus(), updatePunchBtn(), loadTodayLog(selectedEmp)]);
   } catch(e) { toast('Erro ao registrar. Tente novamente.','error'); }
   finally {
     btn.style.opacity = '1';
@@ -1048,11 +1092,7 @@ function openApproveModal(id, emp, date, type, requestedTime) {
   openModal('approveModal');
 }
 
-// ── TIMEZONE HELPER ──
-// Always build timestamps in Brazil local time (UTC-3) to avoid drift
 function buildBrazilTimestamp(date, time) {
-  // date = 'YYYY-MM-DD', time = 'HH:MM'
-  // Append Brazil offset explicitly: UTC-3 = +03:00 subtracted
   return `${date}T${time}:00.000-03:00`;
 }
 
@@ -1062,7 +1102,6 @@ async function approveCorrection() {
   if (!time || !date) { toast('Preencha data e horário','error'); return; }
   const req = pendingCorrections.find(c => c.id === currentCorrectionId);
   if (!req) return;
-  // Fix: use Brazil local time explicitly
   const timestamp = buildBrazilTimestamp(date, time);
   try {
     await api('POST', 'time_logs', {
@@ -1156,10 +1195,8 @@ async function saveEditDay() {
   }
   try {
     for (const r of editDayRows) {
-      // Fix: build timestamp in Brazil local time (UTC-3) to avoid timezone drift
       const timestamp = buildBrazilTimestamp(date, r.time);
       const originalTime = r.originalTime || null;
-
       if (r.deleted && r.id) {
         await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
           method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
@@ -1171,10 +1208,8 @@ async function saveEditDay() {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({
-            type: r.type,
-            timestamp,
-            is_corrected: true,
-            corrected_by: 'Supervisor',
+            type: r.type, timestamp,
+            is_corrected: true, corrected_by: 'Supervisor',
             corrected_at: new Date().toISOString(),
             correction_note: originalTime ? `Horário alterado de ${originalTime} para ${r.time}` : null
           })
@@ -1195,7 +1230,7 @@ async function saveEditDay() {
   } catch(e) { toast('Erro ao salvar alterações','error'); console.error(e); }
 }
 
-// ── TABS (now uses password modal instead of prompt) ──
+// ── TABS ──
 function switchTab(tab) {
   if (tab === 'admin' && !adminUnlocked) {
     openPwdModal(() => {
@@ -1237,15 +1272,12 @@ async function loadSummary() {
     if (empFilter) medQuery += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const medRows = await api('GET', medQuery);
 
-    // Fetch feriados for the period (nacional + estadual MG + municipal Juatuba)
     const feriadosRows = await api('GET',
       `feriados?data=gte.${from}&data=lte.${to}&select=data,nome,tipo,cidade,estado`
     );
-    // Build a Set of holiday dates valid for Juatuba/MG
     const feriadosSet = new Set();
     const feriadosNomes = {};
     feriadosRows.forEach(f => {
-      // Include: nacional, estadual MG, municipal Juatuba — exclude other states
       const valid = !f.estado || f.estado === 'MG' || (f.cidade === 'Juatuba');
       const notOtherCity = !f.cidade || f.cidade === 'Juatuba';
       if (valid && notOtherCity) {
@@ -1254,7 +1286,6 @@ async function loadSummary() {
       }
     });
 
-    // Fetch regime info for CLT employees
     const usuarioRows = await api('GET', 'usuario?status=eq.active&select=full_name,regime,overtime_threshold_hours');
     const regimeMap = {};
     usuarioRows.forEach(u => { regimeMap[u.full_name] = u.regime || 'clt'; });
@@ -1273,18 +1304,13 @@ async function loadSummary() {
       if (!byEmp[m.employee].punches[m.date]) byEmp[m.employee].punches[m.date] = [{ type: 'medical', medical_note: m.note }];
     });
 
-    // For CLT employees: add holiday pay rows for holidays they didn't work
     Object.keys(byEmp).forEach(emp => {
       if (regimeMap[emp] !== 'clt') return;
       feriadosSet.forEach(fDate => {
-        // Only within selected period
         if (fDate < from || fDate > to) return;
-        // If they already have a punch on this day, skip (worked = gets 100% rate as usual)
         if (byEmp[emp].punches[fDate]) return;
-        // Check it's a weekday (Mon-Fri) — holidays on weekends don't generate extra pay
         const dow = new Date(fDate + 'T12:00:00').getDay();
         if (dow === 0 || dow === 6) return;
-        // Add a synthetic "holiday pay" entry
         byEmp[emp].punches[fDate] = [{ type: 'holiday_pay', holiday_name: feriadosNomes[fDate] }];
       });
     });
@@ -1310,20 +1336,16 @@ async function loadSummary() {
         const dayNote = byEmp[emp].notes[date] || '';
         const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
 
-        // ── LICENÇA MÉDICA ──
         if (punches[0] && punches[0].type === 'medical') {
           detailRows += `<div class="summary-row"><div><div style="font-size:13px">🏥 ${ds}</div><div class="sum-note">Licença médica${punches[0].medical_note?': '+punches[0].medical_note:''}</div></div><div style="text-align:right"><div class="sum-hours" style="font-size:13px">—</div></div></div>`;
           return;
         }
 
-        // ── FERIADO NÃO TRABALHADO (CLT) ──
         if (punches[0] && punches[0].type === 'holiday_pay') {
-          const holidayMins = 9 * 60; // 9h regulares
+          const holidayMins = 9 * 60;
           const holidayPay = (holidayMins / 60) * (rates.regular || 0);
-          empHolidayPayMins += holidayMins;
-          empHolidayPayTotal += holidayPay;
-          empTotalMins += holidayMins;
-          empPayTotal += holidayPay;
+          empHolidayPayMins += holidayMins; empHolidayPayTotal += holidayPay;
+          empTotalMins += holidayMins; empPayTotal += holidayPay;
           empRegularMins += holidayMins;
           detailRows += `<div class="summary-row">
             <div>
@@ -1338,7 +1360,6 @@ async function loadSummary() {
           return;
         }
 
-        // ── DIA NORMAL (trabalhado) ──
         let mins = 0;
         for (let i = 0; i < punches.length - 1; i++) {
           if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
@@ -1384,11 +1405,8 @@ async function loadSummary() {
       });
 
       payByEmp[emp] = empPayTotal;
-
-      // Hours breakdown chips
       const holidayChip = empHolidayPayMins > 0
-        ? `<span class="hours-chip" style="color:var(--amber)">🏖️ Feriado CLT: ${fmtHM(empHolidayPayMins)}</span>`
-        : '';
+        ? `<span class="hours-chip" style="color:var(--amber)">🏖️ Feriado CLT: ${fmtHM(empHolidayPayMins)}</span>` : '';
 
       html += `<div class="summary-card">
         <div class="summary-header" style="display:flex;justify-content:space-between;align-items:center">
@@ -1425,6 +1443,7 @@ async function loadSummary() {
     window._lastReportData = { byEmp, payByEmp, payTotal, from, to, empFilter };
   } catch(e) { area.innerHTML = '<div class="empty-state">Erro ao carregar dados</div>'; console.error(e); }
 }
+
 function buildReportRows(byEmp, payByEmp) {
   const allRows = [];
   Object.keys(byEmp).sort().forEach(emp => {
@@ -1436,7 +1455,6 @@ function buildReportRows(byEmp, payByEmp) {
         allRows.push({ emp, date: ds, entrada:'—', saida:'—', total:'—', pagamento:'—', tipo:'Licença Médica', descricao: punches[0].medical_note||'', corrigido: false });
         return;
       }
-      // Holiday pay (CLT employee, didn't work)
       if (punches[0] && punches[0].type === 'holiday_pay') {
         const holidayMins = 9 * 60;
         const rates = hourlyRates[emp] || {};
@@ -1534,7 +1552,6 @@ function exportPDF() {
   const { byEmp, payByEmp, payTotal, from, to, empFilter } = data;
   const fromFmt = new Date(from+'T12:00:00').toLocaleDateString('pt-BR');
   const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
-  const LOGO_SRC = 'data:image/png;base64,/9j/4AAQSkZJRgABAgAAAQABAAD';
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
   script.onload = () => {
@@ -1648,7 +1665,7 @@ async function init() {
   buildEmpGrid();
   setDefaultDates();
   await loadTodayStatus();
-  await loadTodayLog(); // no filter on startup — shows empty state until PIN entered
+  await loadTodayLog();
   setInterval(() => { if (selectedEmp) loadTodayLog(selectedEmp); }, 30000);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
