@@ -1,5 +1,5 @@
 // Vicaf Hydro — Service Worker
-const CACHE = 'vicaf-v1';
+const CACHE = 'vicaf-v2';
 const SHELL = [
   '/vicafponto/menu.html',
   '/vicafponto/index.html',
