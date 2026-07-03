@@ -472,17 +472,23 @@ const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicaf2026!';
 
-let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {}, employeePins = {};
+let EMPLOYEES = [], selectedEmp = null, employeeStatus = {}, hourlyRates = {};
 let pendingCorrections = [], currentCorrectionId = null;
 let editDayContext = null;
 let editDayRows = [];
 let adminUnlocked = false;
 let pendingTabAction = null;
 
-// ── HELPER: check if a PIN value is actually set ──
-// Treats null, undefined, and empty string as "no PIN"
-function pinIsSet(val) {
-  return val !== null && val !== undefined && val !== '';
+// ── RPC helper: PIN handling goes through Postgres functions (never reads/writes
+// the pin column directly), so PINs stay hashed server-side end to end. ──
+async function rpc(name, params) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params || {})
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  return res.json();
 }
 
 // ── PASSWORD MODAL ──
@@ -562,13 +568,16 @@ function toast(msg, type='success') {
 
 function initials(name) { return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
 
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function loadEmployees() {
   try {
-    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
+    const rows = await api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,regular_hourly_rate,overtime_rate,weekend_rate,saturday_rate,sunday_rate,holiday_rate,overtime_threshold_hours,saturday_threshold_hours');
     EMPLOYEES = rows.map(r => r.full_name);
     rows.forEach(r => {
-      // Store pin exactly as returned — pinIsSet() handles null/empty checks everywhere
-      employeePins[r.full_name] = r.pin ?? null;
       hourlyRates[r.full_name] = {
         regular: r.regular_hourly_rate||0, overtime: r.overtime_rate||0,
         weekend: r.weekend_rate||0, saturday: r.saturday_rate||0,
@@ -585,9 +594,9 @@ function buildEmpGrid() {
   const grid = document.getElementById('empGrid');
   if (!EMPLOYEES.length) { grid.innerHTML = '<div class="empty-state">Nenhum funcionário encontrado</div>'; return; }
   grid.innerHTML = EMPLOYEES.map(emp => `
-    <button class="emp-btn" onclick="selectEmp('${emp}')" id="emp-${emp.replace(/\s/g,'_')}">
-      <div class="emp-avatar">${initials(emp)}</div>
-      <div><div class="emp-name">${emp}</div><div class="emp-status" id="empStatus-${emp.replace(/\s/g,'_')}">—</div></div>
+    <button class="emp-btn" onclick="selectEmp('${escapeHtml(emp.replace(/'/g,"\\'"))}')" id="emp-${emp.replace(/\s/g,'_')}">
+      <div class="emp-avatar">${escapeHtml(initials(emp))}</div>
+      <div><div class="emp-name">${escapeHtml(emp)}</div><div class="emp-status" id="empStatus-${emp.replace(/\s/g,'_')}">—</div></div>
     </button>`).join('');
 }
 
@@ -620,13 +629,13 @@ async function loadTodayLog(empFilter) {
       const t = parseTS(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
       const typeLabel = r.type === 'clock_in' ? 'Entrada' : 'Saída';
       const corrBadge = r.is_corrected ? '<span class="log-corrected-badge">corrigido</span>' : '';
-      const noteHtml = r.notes ? `<div class="log-note">📝 ${r.notes}</div>` : '';
-      const corrNoteHtml = r.correction_note ? `<div class="log-note" style="color:var(--amber)">✎ ${r.correction_note}</div>` : '';
+      const noteHtml = r.notes ? `<div class="log-note">📝 ${escapeHtml(r.notes)}</div>` : '';
+      const corrNoteHtml = r.correction_note ? `<div class="log-note" style="color:var(--amber)">✎ ${escapeHtml(r.correction_note)}</div>` : '';
       return `<div class="log-item">
         <div class="log-item-row">
           <div class="log-left">
             <div class="log-dot ${r.is_corrected?'corrected':r.type==='clock_in'?'in':'out'}"></div>
-            <div><div class="log-type">${typeLabel}${corrBadge}</div><div class="log-emp">${r.employee}</div></div>
+            <div><div class="log-type">${typeLabel}${corrBadge}</div><div class="log-emp">${escapeHtml(r.employee)}</div></div>
           </div>
           <div class="log-time">${t}</div>
         </div>${noteHtml}${corrNoteHtml}
@@ -655,20 +664,11 @@ async function openPinModal(name) {
   document.getElementById('pinOverlay').classList.add('show');
   updatePinDots();
 
-  // ── ALWAYS re-fetch the PIN from DB to avoid stale cache issues ──
-  // This is what was causing "first time" prompts for users who already had a PIN:
-  // the local cache could be out of date or contain an empty string instead of null.
+  // Ask the server whether this employee has a PIN set yet — never reads the
+  // PIN itself, just a boolean (has_pin RPC, backed by a hashed column).
   try {
-    const rows = await fetch(
-      `${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}&select=pin`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    ).then(r => r.json());
-
-    const freshPin = rows[0]?.pin ?? null;
-    // Update local cache with fresh value
-    employeePins[name] = freshPin;
-
-    if (pinIsSet(freshPin)) {
+    const hasPin = await rpc('has_pin', { p_name: name });
+    if (hasPin) {
       pinMode = 'verify';
       document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
       checkLockout(name);
@@ -680,19 +680,8 @@ async function openPinModal(name) {
       enableKeypad(true);
     }
   } catch(e) {
-    // On fetch error, fall back to cached value
-    const cachedPin = employeePins[name] ?? null;
-    if (pinIsSet(cachedPin)) {
-      pinMode = 'verify';
-      document.getElementById('pinSubtitle').textContent = 'Digite seu PIN de 4 dígitos';
-      checkLockout(name);
-    } else {
-      pinMode = 'create';
-      document.getElementById('pinSubtitle').innerHTML =
-        'Primeiro acesso! Crie um PIN de 4 dígitos.<br>' +
-        '<span style="font-size:11px;color:var(--text3)">Você vai usar esse PIN toda vez que bater o ponto.</span>';
-      enableKeypad(true);
-    }
+    document.getElementById('pinError').textContent = 'Erro ao verificar PIN. Tente novamente.';
+    enableKeypad(false);
   }
 }
 
@@ -789,15 +778,7 @@ async function handlePinComplete() {
 
 async function savePinToSupabase(name, pin) {
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ pin })
-    });
-    employeePins[name] = pin;
+    await rpc('set_pin', { p_name: name, p_pin: pin });
     toast('PIN criado com sucesso! ✅', 'success');
     closePinModal();
     unlockEmployee(name);
@@ -808,55 +789,28 @@ async function savePinToSupabase(name, pin) {
   }
 }
 
+// Verification, attempt-counting, and lockout are all enforced inside the
+// verify_pin RPC (server-side) — the client just displays whatever it returns.
 async function verifyPin(name, entered) {
-  if (entered === employeePins[name]) {
-    // Correct — clear lockout record and proceed
-    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-    }).catch(() => {});
-    closePinModal();
-    unlockEmployee(name);
-  } else {
-    updatePinDots('error');
-    await registerFailedAttempt(name);
-    setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
-  }
-}
-
-async function registerFailedAttempt(name) {
   try {
-    const rows = await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}&select=failed_attempts,locked_until`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-    }).then(r => r.json());
-
-    const current = rows[0];
-    const attempts = (current?.failed_attempts || 0) + 1;
-
-    if (attempts >= 3) {
-      const lockedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await upsertLockout(name, attempts, lockedUntil);
-      document.getElementById('pinError').textContent = `🔒 Bloqueado por 5 minutos`;
+    const [result] = await rpc('verify_pin', { p_name: name, p_pin: entered });
+    if (result.ok) {
+      closePinModal();
+      unlockEmployee(name);
+      return;
+    }
+    updatePinDots('error');
+    if (result.locked) {
+      document.getElementById('pinError').textContent = `🔒 Bloqueado por mais ${result.locked_minutes} min`;
       enableKeypad(false);
     } else {
-      await upsertLockout(name, attempts, null);
-      document.getElementById('pinError').textContent = `PIN incorreto — tentativa ${attempts}/3`;
+      document.getElementById('pinError').textContent = `PIN incorreto — tentativa ${result.attempts}/3`;
+      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
     }
   } catch(e) {
-    document.getElementById('pinError').textContent = 'PIN incorreto';
+    document.getElementById('pinError').textContent = 'Erro ao verificar PIN';
+    setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
   }
-}
-
-async function upsertLockout(name, attempts, lockedUntil) {
-  await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=minimal'
-    },
-    body: JSON.stringify({ employee_name: name, failed_attempts: attempts, locked_until: lockedUntil })
-  });
 }
 
 // ── PIN MANAGEMENT (supervisor) ──
@@ -864,14 +818,11 @@ async function loadPinManagement() {
   const area = document.getElementById('pinManageArea');
   try {
     const [users, lockouts] = await Promise.all([
-      api('GET', 'usuario?status=eq.active&order=full_name.asc&select=full_name,pin'),
+      rpc('list_pin_status', {}),
       fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?select=employee_name,failed_attempts,locked_until`, {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       }).then(r => r.json())
     ]);
-
-    // Also refresh local PIN cache while we're at it
-    users.forEach(u => { employeePins[u.full_name] = u.pin ?? null; });
 
     const lockoutMap = {};
     lockouts.forEach(l => { lockoutMap[l.employee_name] = l; });
@@ -879,8 +830,7 @@ async function loadPinManagement() {
     area.innerHTML = users.map(u => {
       const lockout = lockoutMap[u.full_name];
       const isLocked = lockout?.locked_until && new Date(lockout.locked_until) > new Date();
-      // Use pinIsSet() for consistent null/empty detection
-      const hasPin = pinIsSet(u.pin);
+      const hasPin = u.has_pin;
       let statusClass, statusText;
       if (isLocked) {
         const mins = Math.ceil((new Date(lockout.locked_until) - new Date()) / 60000);
@@ -899,7 +849,7 @@ async function loadPinManagement() {
             <div class="pin-manage-status ${statusClass}">${statusText}</div>
           </div>
         </div>
-        ${showResetBtn ? `<button class="pin-reset-btn" onclick="resetPin('${u.full_name.replace(/'/g,"\\'")}')">Resetar PIN</button>` : ''}
+        ${showResetBtn ? `<button class="pin-reset-btn" onclick="resetPin('${escapeHtml(u.full_name.replace(/'/g,"\\'"))}')">Resetar PIN</button>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -910,16 +860,7 @@ async function loadPinManagement() {
 async function resetPin(name) {
   if (!confirm(`Resetar o PIN de ${name}?\n\nEle precisará criar um novo PIN no próximo acesso.`)) return;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/usuario?full_name=eq.${encodeURIComponent(name)}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ pin: null })
-    });
-    await fetch(`${SUPABASE_URL}/rest/v1/pin_lockout?employee_name=eq.${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
-    });
-    employeePins[name] = null;
+    await rpc('set_pin', { p_name: name, p_pin: null });
     toast(`PIN de ${name} resetado`, 'success');
     loadPinManagement();
   } catch(e) {
@@ -1057,9 +998,9 @@ async function loadPendingRequests() {
       html += `<div class="request-card">
         <div class="request-header"><span class="request-type correction">⏰ Correção de ponto</span><span style="font-size:11px;color:var(--text3)">${d}</span></div>
         <div class="request-body">
-          <div class="request-emp">${c.employee}</div>
-          <div class="request-detail">${typeLabel} · Horário solicitado: ${c.requested_time}</div>
-          ${c.note?`<div class="request-note">"${c.note}"</div>`:''}
+          <div class="request-emp">${escapeHtml(c.employee)}</div>
+          <div class="request-detail">${typeLabel} · Horário solicitado: ${escapeHtml(c.requested_time)}</div>
+          ${c.note?`<div class="request-note">"${escapeHtml(c.note)}"</div>`:''}
           <div class="request-actions">
             <button class="req-btn approve" onclick="openApproveModal('${c.id}','${c.employee}','${c.date}','${c.type}','${c.requested_time}')">✓ Aprovar</button>
             <button class="req-btn dismiss" onclick="dismissRequest('${c.id}')">Dispensar</button>
@@ -1072,8 +1013,8 @@ async function loadPendingRequests() {
       html += `<div class="request-card">
         <div class="request-header"><span class="request-type medical">🏥 Licença médica</span><span style="font-size:11px;color:var(--text3)">${d}</span></div>
         <div class="request-body">
-          <div class="request-emp">${m.employee}</div>
-          ${m.note?`<div class="request-note">"${m.note}"</div>`:''}
+          <div class="request-emp">${escapeHtml(m.employee)}</div>
+          ${m.note?`<div class="request-note">"${escapeHtml(m.note)}"</div>`:''}
           <div class="request-actions"><button class="req-btn dismiss" onclick="dismissMedical('${m.id}')">Marcar como visto</button></div>
         </div>
       </div>`;
@@ -1337,7 +1278,7 @@ async function loadSummary() {
         const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
 
         if (punches[0] && punches[0].type === 'medical') {
-          detailRows += `<div class="summary-row"><div><div style="font-size:13px">🏥 ${ds}</div><div class="sum-note">Licença médica${punches[0].medical_note?': '+punches[0].medical_note:''}</div></div><div style="text-align:right"><div class="sum-hours" style="font-size:13px">—</div></div></div>`;
+          detailRows += `<div class="summary-row"><div><div style="font-size:13px">🏥 ${ds}</div><div class="sum-note">Licença médica${punches[0].medical_note?': '+escapeHtml(punches[0].medical_note):''}</div></div><div style="text-align:right"><div class="sum-hours" style="font-size:13px">—</div></div></div>`;
           return;
         }
 
@@ -1350,7 +1291,7 @@ async function loadSummary() {
           detailRows += `<div class="summary-row">
             <div>
               <div style="font-size:13px">🏖️ ${ds}</div>
-              <div class="sum-note">${punches[0].holiday_name} — Feriado CLT (9h pagas)</div>
+              <div class="sum-note">${escapeHtml(punches[0].holiday_name)} — Feriado CLT (9h pagas)</div>
             </div>
             <div style="text-align:right">
               <div class="sum-hours" style="font-size:13px;color:var(--amber)">${fmtHM(holidayMins)}</div>
@@ -1392,10 +1333,10 @@ async function loadSummary() {
 
         const tipoBadge = tipoDia==='feriado'?'🔴':tipoDia==='sabado'?'🟡':tipoDia==='domingo'?'🟠':'🟢';
         const hasCorrected = punches.some(p => p.is_corrected);
-        detailRows += `<div class="summary-row summary-row-clickable" onclick="openEditDayModal('${emp.replace(/'/g,"\\'")}','${date}')">
+        detailRows += `<div class="summary-row summary-row-clickable" onclick="openEditDayModal('${escapeHtml(emp.replace(/'/g,"\\'"))}','${date}')">
           <div>
             <div style="font-size:13px;font-weight:400">${tipoBadge} ${ds}${hasCorrected?' <span style="font-size:10px;color:var(--amber)">✎</span>':''} <span class="day-edit-trigger">editar</span></div>
-            ${dayNote?`<div class="sum-note" style="max-width:220px;white-space:normal">📝 ${dayNote}</div>`:''}
+            ${dayNote?`<div class="sum-note" style="max-width:220px;white-space:normal">📝 ${escapeHtml(dayNote)}</div>`:''}
           </div>
           <div style="text-align:right">
             <div class="sum-hours" style="font-size:13px">${fmtHM(mins)}</div>
@@ -1509,6 +1450,8 @@ function exportExcel() {
   const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.integrity = 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjwj';
+  script.crossOrigin = 'anonymous';
   script.onload = () => {
     const wb = XLSX.utils.book_new();
     const summaryData = [['VICAF HYDRO — RELATÓRIO DE PONTO'],[`Período: ${fromFmt} a ${toFmt}`],[`Gerado em: ${new Date().toLocaleString('pt-BR')}`],[],['Funcionário','Total Horas','Pagamento Estimado']];
@@ -1554,6 +1497,8 @@ function exportPDF() {
   const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  script.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk';
+  script.crossOrigin = 'anonymous';
   script.onload = () => {
     const { jsPDF } = window.jspdf;
     const rows = buildReportRows(byEmp, payByEmp);

@@ -700,6 +700,11 @@ function initials(name) {
   return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 }
 
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function fmtDate(d) {
   if (!d) return '—';
   const [y, m, day] = d.split('-');
@@ -809,11 +814,11 @@ async function loadComplianceOverview() {
       const overall     = worstStatus([exameStatus, nrStatus]);
       const cargo       = cargoMap[name] || '';
 
-      return `<div class="overview-card" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
-        <div class="overview-avatar">${initials(name)}</div>
+      return `<div class="overview-card" onclick="openProfile('${escapeHtml(name.replace(/'/g,"\\'"))}')">
+        <div class="overview-avatar">${escapeHtml(initials(name))}</div>
         <div class="overview-info">
-          <div class="overview-name">${name}</div>
-          ${cargo ? `<div class="overview-cargo">${cargo}</div>` : ''}
+          <div class="overview-name">${escapeHtml(name)}</div>
+          ${cargo ? `<div class="overview-cargo">${escapeHtml(cargo)}</div>` : ''}
           <div class="overview-badges">
             <span class="ov-badge ${badgeClass[exameStatus]}">Exames: ${badgeLabel[exameStatus]}</span>
             <span class="ov-badge ${badgeClass[nrStatus]}">NRs: ${badgeLabel[nrStatus]}</span>
@@ -843,10 +848,10 @@ function buildEmpGrid() {
   const grid = document.getElementById('empGrid');
   if (!allEmployees.length) { grid.innerHTML = '<div class="loading">Nenhum funcionário encontrado.</div>'; return; }
   grid.innerHTML = allEmployees.map(name => `
-    <button class="emp-btn" onclick="openProfile('${name.replace(/'/g,"\\'")}')">
-      <div class="emp-avatar">${initials(name)}</div>
+    <button class="emp-btn" onclick="openProfile('${escapeHtml(name.replace(/'/g,"\\'"))}')">
+      <div class="emp-avatar">${escapeHtml(initials(name))}</div>
       <div>
-        <div class="emp-name">${name}</div>
+        <div class="emp-name">${escapeHtml(name)}</div>
       </div>
     </button>
   `).join('');
@@ -933,12 +938,12 @@ async function loadExames(name) {
     area.innerHTML = rows.map(r => `
       <div class="doc-item" onclick="${isSupervisor ? `openEditExameModal('${r.id}')` : ''}">
         <div class="doc-info">
-          <div class="doc-name">${r.tipo_exame}</div>
+          <div class="doc-name">${escapeHtml(r.tipo_exame)}</div>
           <div class="doc-dates">
             ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
             ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
           </div>
-          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+          ${r.observacao ? `<div class="doc-obs">${escapeHtml(r.observacao)}</div>` : ''}
         </div>
         ${getStatusBadge(r.data_validade)}
       </div>
@@ -960,12 +965,12 @@ async function loadNRs(name) {
     area.innerHTML = rows.map(r => `
       <div class="doc-item" onclick="${isSupervisor ? `openEditNRModal('${r.id}')` : ''}">
         <div class="doc-info">
-          <div class="doc-name">${r.nr_codigo}${r.nr_nome ? ' — ' + r.nr_nome : ''}</div>
+          <div class="doc-name">${escapeHtml(r.nr_codigo)}${r.nr_nome ? ' — ' + escapeHtml(r.nr_nome) : ''}</div>
           <div class="doc-dates">
             ${r.data_realizacao ? `Realizado: ${fmtDate(r.data_realizacao)}` : ''}
             ${r.data_validade ? ` · Válido até: ${fmtDate(r.data_validade)}` : ''}
           </div>
-          ${r.observacao ? `<div class="doc-obs">${r.observacao}</div>` : ''}
+          ${r.observacao ? `<div class="doc-obs">${escapeHtml(r.observacao)}</div>` : ''}
         </div>
         ${getStatusBadge(r.data_validade)}
       </div>
