@@ -349,6 +349,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
       <button onclick="loadSummary()">Ver</button>
     </div>
     <div id="summaryArea"><div class="empty-state">Selecione um período e clique em Ver</div></div>
+    <div id="correctionsArea"></div>
   </div>
 </div>
 
@@ -453,6 +454,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <div id="approveDetails" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6"></div>
     <div class="modal-label">Horário correto</div><input type="time" id="approveTime" />
     <div class="modal-label">Data</div><input type="date" id="approveDate" />
+    <div class="modal-label">Este registro substitui</div>
+    <select id="approveSupersede"><option value="">— Adicionar novo registro (nada a substituir) —</option></select>
     <button class="modal-btn green" onclick="approveCorrection()">Confirmar correção</button>
   </div>
 </div>
@@ -463,6 +466,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     <div class="modal-title" id="editDayTitle">Editar registros do dia</div>
     <div id="editDayPunches"></div>
     <button class="action-btn blue" style="width:100%;margin-bottom:16px;padding:11px" onclick="addEditPunchRow()">+ Adicionar registro</button>
+    <div class="modal-label">Motivo da alteração</div>
+    <textarea id="editDayReason" placeholder="Explique o que foi corrigido e por quê..."></textarea>
     <button class="modal-btn green" onclick="saveEditDay()">Salvar alterações</button>
   </div>
 </div>
@@ -535,6 +540,44 @@ async function api(method, path, body) {
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
   if (method === 'GET') return res.json();
   return true;
+}
+
+async function insertTimeLog(body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/time_logs', {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  const rows = await res.json();
+  return rows[0];
+}
+
+async function supersedeTimeLog(id) {
+  await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + id, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ superseded: true, corrected_by: 'Supervisor', corrected_at: new Date().toISOString() })
+  });
+}
+
+// Pairs clock_in/clock_out punches for a single employee-day into work sessions.
+// Superseded punches are excluded defensively even when the caller's query already filters them,
+// since a stray leftover pair is what silently zeroed out corrected days before this fix.
+function pairPunches(punches) {
+  const active = punches.filter(p => !p.superseded);
+  const pairs = [];
+  let mins = 0, corrected = false;
+  for (let i = 0; i < active.length - 1; i++) {
+    if (active[i].type === 'clock_in' && active[i+1].type === 'clock_out') {
+      const pairMins = (parseTS(active[i+1].timestamp) - parseTS(active[i].timestamp)) / 60000;
+      mins += pairMins;
+      if (active[i].is_corrected || active[i+1].is_corrected) corrected = true;
+      pairs.push({ inPunch: active[i], outPunch: active[i+1], mins: pairMins });
+      i++;
+    }
+  }
+  return { mins, pairs, corrected };
 }
 
 function parseTS(ts) {
@@ -621,7 +664,7 @@ async function loadTodayLog(empFilter) {
   const today = getLocalDate();
   const logEl = document.getElementById('todayLog');
   try {
-    let query = `time_logs?date=eq.${today}&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected,correction_note`;
+    let query = `time_logs?date=eq.${today}&superseded=eq.false&order=timestamp.desc&select=employee,type,timestamp,notes,is_corrected,correction_note`;
     if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const rows = await api('GET', query);
     if (!rows.length) { logEl.innerHTML = '<div class="empty-state">Nenhum registro hoje</div>'; return; }
@@ -918,7 +961,7 @@ async function doPunch() {
   const btn = document.getElementById('punchBtn');
   if (btn.classList.contains('disabled')) return;
   const today = getLocalDate();
-  const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&order=timestamp.desc&limit=1&select=type`);
+  const rows = await api('GET', `time_logs?date=eq.${today}&employee=eq.${encodeURIComponent(selectedEmp)}&superseded=eq.false&order=timestamp.desc&limit=1&select=type`);
   const last = rows[0];
   const type = (!last || last.type === 'clock_out') ? 'clock_in' : 'clock_out';
   const note = document.getElementById('dailyNote').value.trim();
@@ -1023,14 +1066,26 @@ async function loadPendingRequests() {
   } catch(e) { listEl.innerHTML = '<div class="empty-state">Erro ao carregar solicitações</div>'; }
 }
 
-function openApproveModal(id, emp, date, type, requestedTime) {
+async function openApproveModal(id, emp, date, type, requestedTime) {
   currentCorrectionId = id;
   const typeLabel = type === 'clock_in' ? 'Entrada' : 'Saída';
   const d = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('approveDetails').innerHTML = `<strong>${emp}</strong><br>Tipo: ${typeLabel}<br>Data: ${d}<br>Horário solicitado: <strong>${requestedTime}</strong>`;
   document.getElementById('approveTime').value = requestedTime;
   document.getElementById('approveDate').value = date;
+  const sel = document.getElementById('approveSupersede');
+  sel.innerHTML = '<option value="">— Adicionar novo registro (nada a substituir) —</option>';
   openModal('approveModal');
+  try {
+    const dayPunches = await api('GET', `time_logs?employee=eq.${encodeURIComponent(emp)}&date=eq.${date}&superseded=eq.false&order=timestamp.asc&select=id,type,timestamp`);
+    dayPunches.forEach(p => {
+      const t = parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.type==='clock_in'?'Entrada':'Saída'} às ${t}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error(e); }
 }
 
 function buildBrazilTimestamp(date, time) {
@@ -1040,16 +1095,31 @@ function buildBrazilTimestamp(date, time) {
 async function approveCorrection() {
   const time = document.getElementById('approveTime').value;
   const date = document.getElementById('approveDate').value;
+  const supersedeId = document.getElementById('approveSupersede').value || null;
   if (!time || !date) { toast('Preencha data e horário','error'); return; }
   const req = pendingCorrections.find(c => c.id === currentCorrectionId);
   if (!req) return;
   const timestamp = buildBrazilTimestamp(date, time);
   try {
-    await api('POST', 'time_logs', {
+    let oldPunch = null;
+    if (supersedeId) {
+      const rows = await api('GET', `time_logs?id=eq.${supersedeId}&select=id,type,timestamp`);
+      oldPunch = rows[0] || null;
+    }
+    const newPunch = await insertTimeLog({
       employee: req.employee, type: req.type, timestamp, date,
       is_corrected: true, corrected_by: 'Supervisor',
       corrected_at: new Date().toISOString(),
       correction_note: `Correção aprovada — horário solicitado: ${req.requested_time}${req.note ? ' · Motivo: ' + req.note : ''}`
+    });
+    if (oldPunch) await supersedeTimeLog(oldPunch.id);
+    await api('POST', 'correction_log', {
+      employee: req.employee, date,
+      old_time_log_id: oldPunch ? oldPunch.id : null,
+      old_type: oldPunch ? oldPunch.type : null,
+      old_time: oldPunch ? oldPunch.timestamp : null,
+      new_time_log_id: newPunch.id, new_type: req.type, new_time: timestamp,
+      reasoning: req.note || null, approved_by: 'Supervisor', request_id: req.id
     });
     await fetch(SUPABASE_URL + '/rest/v1/solicitacao_correcao_ponto?id=eq.' + currentCorrectionId, {
       method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -1057,7 +1127,7 @@ async function approveCorrection() {
     });
     toast('Correção aplicada com sucesso','success');
     closeModal('approveModal'); loadPendingRequests(); loadTodayLog();
-  } catch(e) { toast('Erro ao aplicar correção','error'); }
+  } catch(e) { toast('Erro ao aplicar correção','error'); console.error(e); }
 }
 
 async function dismissRequest(id) {
@@ -1089,12 +1159,14 @@ function openEditDayModal(employee, date) {
   editDayRows = punches.map(p => ({
     id: p.id || null,
     type: p.type,
+    originalType: p.type,
     time: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
     originalTime: parseTS(p.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
     isNew: false, deleted: false
   }));
   const ds = new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('editDayTitle').textContent = `${employee} — ${ds}`;
+  document.getElementById('editDayReason').value = '';
   renderEditDayRows();
   openModal('editDayModal');
 }
@@ -1134,33 +1206,48 @@ async function saveEditDay() {
   for (const r of visible) {
     if (!r.time) { toast('Preencha o horário de todos os registros','error'); return; }
   }
+  const reason = document.getElementById('editDayReason').value.trim();
   try {
     for (const r of editDayRows) {
-      const timestamp = buildBrazilTimestamp(date, r.time);
-      const originalTime = r.originalTime || null;
-      if (r.deleted && r.id) {
-        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
-          method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+      if (r.deleted) {
+        if (!r.id) continue; // never existed in the DB, nothing to void
+        await supersedeTimeLog(r.id);
+        await api('POST', 'correction_log', {
+          employee, date,
+          old_time_log_id: r.id, old_type: r.originalType, old_time: buildBrazilTimestamp(date, r.originalTime),
+          new_time_log_id: null, new_type: null, new_time: null,
+          reasoning: reason || 'Registro removido pelo supervisor', approved_by: 'Supervisor'
         });
-      } else if (r.deleted) {
         continue;
-      } else if (r.id) {
-        await fetch(SUPABASE_URL + '/rest/v1/time_logs?id=eq.' + r.id, {
-          method: 'PATCH',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({
-            type: r.type, timestamp,
-            is_corrected: true, corrected_by: 'Supervisor',
-            corrected_at: new Date().toISOString(),
-            correction_note: originalTime ? `Horário alterado de ${originalTime} para ${r.time}` : null
-          })
+      }
+      const timestamp = buildBrazilTimestamp(date, r.time);
+      if (r.id) {
+        if (r.time === r.originalTime && r.type === r.originalType) continue; // unchanged, nothing to do
+        await supersedeTimeLog(r.id);
+        const newPunch = await insertTimeLog({
+          employee, type: r.type, timestamp, date,
+          is_corrected: true, corrected_by: 'Supervisor',
+          corrected_at: new Date().toISOString(),
+          correction_note: `Horário alterado de ${r.originalTime} para ${r.time}`
+        });
+        await api('POST', 'correction_log', {
+          employee, date,
+          old_time_log_id: r.id, old_type: r.originalType, old_time: buildBrazilTimestamp(date, r.originalTime),
+          new_time_log_id: newPunch.id, new_type: r.type, new_time: timestamp,
+          reasoning: reason || null, approved_by: 'Supervisor'
         });
       } else {
-        await api('POST', 'time_logs', {
+        const newPunch = await insertTimeLog({
           employee, type: r.type, timestamp, date,
           is_corrected: true, corrected_by: 'Supervisor',
           corrected_at: new Date().toISOString(),
           correction_note: `Registro adicionado pelo supervisor`
+        });
+        await api('POST', 'correction_log', {
+          employee, date,
+          old_time_log_id: null, old_type: null, old_time: null,
+          new_time_log_id: newPunch.id, new_type: r.type, new_time: timestamp,
+          reasoning: reason || 'Registro adicionado pelo supervisor', approved_by: 'Supervisor'
         });
       }
     }
@@ -1205,7 +1292,7 @@ async function loadSummary() {
   const area = document.getElementById('summaryArea');
   area.innerHTML = '<div class="loading">Calculando...</div>';
   try {
-    let query = `time_logs?date=gte.${from}&date=lte.${to}&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected,correction_note`;
+    let query = `time_logs?date=gte.${from}&date=lte.${to}&superseded=eq.false&order=employee.asc,timestamp.asc&select=id,employee,type,timestamp,date,tipo_dia,notes,is_corrected,correction_note,superseded`;
     if (empFilter) query += `&employee=eq.${encodeURIComponent(empFilter)}`;
     const rows = await api('GET', query);
 
@@ -1301,13 +1388,7 @@ async function loadSummary() {
           return;
         }
 
-        let mins = 0;
-        for (let i = 0; i < punches.length - 1; i++) {
-          if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-            mins += (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
-            i++;
-          }
-        }
+        const { mins } = pairPunches(punches);
         const hrs = mins / 60;
         const tipoDia = punches[0].tipo_dia || 'regular';
         const threshold = rates.overtimeThreshold || 8;
@@ -1382,7 +1463,35 @@ async function loadSummary() {
 
     area.innerHTML = html;
     window._lastReportData = { byEmp, payByEmp, payTotal, from, to, empFilter };
+    loadCorrectionsPanel(from, to, empFilter);
   } catch(e) { area.innerHTML = '<div class="empty-state">Erro ao carregar dados</div>'; console.error(e); }
+}
+
+async function fetchCorrectionLogs(from, to, empFilter) {
+  let q = `correction_log?date=gte.${from}&date=lte.${to}&order=date.desc,created_at.desc&select=*`;
+  if (empFilter) q += `&employee=eq.${encodeURIComponent(empFilter)}`;
+  return api('GET', q);
+}
+
+async function loadCorrectionsPanel(from, to, empFilter) {
+  const el = document.getElementById('correctionsArea');
+  try {
+    const logs = await fetchCorrectionLogs(from, to, empFilter);
+    if (!logs.length) { el.innerHTML = ''; return; }
+    const fmtT = ts => ts ? parseTS(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : null;
+    const rows = logs.map(c => {
+      const d = new Date(c.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const oldStr = c.old_time_log_id ? `${c.old_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.old_time)}` : '— (novo registro)';
+      const newStr = c.new_time_log_id ? `${c.new_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.new_time)}` : '— (removido)';
+      return `<div class="log-item">
+        <div class="log-item-row"><div class="log-emp">${d} · <strong>${escapeHtml(c.employee)}</strong></div></div>
+        <div style="font-size:13px;margin-top:4px">${oldStr} → ${newStr}</div>
+        ${c.reasoning?`<div class="log-note">"${escapeHtml(c.reasoning)}"</div>`:''}
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">Aprovado por ${escapeHtml(c.approved_by||'—')} em ${new Date(c.approved_at).toLocaleString('pt-BR')}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div class="section-label" style="margin-top:20px">Correções aplicadas no período</div><div class="log-list">${rows}</div>`;
+  } catch(e) { el.innerHTML = ''; console.error(e); }
 }
 
 function buildReportRows(byEmp, payByEmp) {
@@ -1403,19 +1512,11 @@ function buildReportRows(byEmp, payByEmp) {
         allRows.push({ emp, date: ds, entrada:'—', saida:'—', total: fmtHM(holidayMins), pagamento: `R$ ${pay.toFixed(2)}`, tipo:'Feriado CLT', descricao: punches[0].holiday_name||'', corrigido: false, regularMins: holidayMins, regularOTMins:0, saturdayMins:0, sundayHolidayMins:0 });
         return;
       }
-      let mins = 0, corrected = false;
-      const pairs = [];
-      for (let i = 0; i < punches.length - 1; i++) {
-        if (punches[i].type === 'clock_in' && punches[i+1].type === 'clock_out') {
-          const inT = parseTS(punches[i].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
-          const outT = parseTS(punches[i+1].timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
-          const pairMins = (parseTS(punches[i+1].timestamp) - parseTS(punches[i].timestamp)) / 60000;
-          mins += pairMins;
-          if (punches[i].is_corrected || punches[i+1].is_corrected) corrected = true;
-          pairs.push({ inT, outT });
-          i++;
-        }
-      }
+      const { mins, pairs: rawPairs, corrected } = pairPunches(punches);
+      const pairs = rawPairs.map(p => ({
+        inT: parseTS(p.inPunch.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}),
+        outT: parseTS(p.outPunch.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})
+      }));
       const rates = hourlyRates[emp] || {};
       const tipoDia = punches[0].tipo_dia || 'regular';
       const tipoLabel = tipoDia==='feriado'?'Feriado':tipoDia==='sabado'?'Sábado':tipoDia==='domingo'?'Domingo':'Regular';
@@ -1442,12 +1543,13 @@ function buildReportRows(byEmp, payByEmp) {
   return allRows;
 }
 
-function exportExcel() {
+async function exportExcel() {
   const data = window._lastReportData;
   if (!data) return;
   const { byEmp, payByEmp, payTotal, from, to, empFilter } = data;
   const fromFmt = new Date(from+'T12:00:00').toLocaleDateString('pt-BR');
   const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
+  const correctionLogs = await fetchCorrectionLogs(from, to, empFilter).catch(() => []);
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   script.integrity = 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjwj';
@@ -1459,8 +1561,8 @@ function exportExcel() {
       let totalMins = 0;
       Object.keys(byEmp[emp].punches).sort().forEach(date => {
         const punches = byEmp[emp].punches[date];
-        if (punches[0] && punches[0].type==='medical') return;
-        for (let i=0;i<punches.length-1;i++) { if(punches[i].type==='clock_in'&&punches[i+1].type==='clock_out'){totalMins+=(parseTS(punches[i+1].timestamp)-parseTS(punches[i].timestamp))/60000;i++;} }
+        if (punches[0] && (punches[0].type==='medical' || punches[0].type==='holiday_pay')) return;
+        totalMins += pairPunches(punches).mins;
       });
       summaryData.push([emp,fmtHM(totalMins),`R$ ${payByEmp[emp].toFixed(2)}`]);
     });
@@ -1474,6 +1576,19 @@ function exportExcel() {
     const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
     wsDetail['!cols'] = [{wch:22},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:35},{wch:10}];
     XLSX.utils.book_append_sheet(wb, wsDetail, 'Detalhado');
+    if (correctionLogs.length) {
+      const fmtT = ts => ts ? new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : '—';
+      const corrData = [['Funcionário','Data','De','Para','Motivo','Aprovado por','Aprovado em']];
+      correctionLogs.forEach(c => corrData.push([
+        c.employee, new Date(c.date+'T12:00:00').toLocaleDateString('pt-BR'),
+        c.old_time_log_id ? `${c.old_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.old_time)}` : '(novo registro)',
+        c.new_time_log_id ? `${c.new_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.new_time)}` : '(removido)',
+        c.reasoning||'', c.approved_by||'', new Date(c.approved_at).toLocaleString('pt-BR')
+      ]));
+      const wsCorr = XLSX.utils.aoa_to_sheet(corrData);
+      wsCorr['!cols'] = [{wch:22},{wch:14},{wch:18},{wch:18},{wch:35},{wch:16},{wch:20}];
+      XLSX.utils.book_append_sheet(wb, wsCorr, 'Correções');
+    }
     Object.keys(byEmp).sort().forEach(emp => {
       const empData = [[`VICAF HYDRO — ${emp.toUpperCase()}`],[`Período: ${fromFmt} a ${toFmt}`],[],['Data','Entrada','Saída','Total','Tipo de Dia','Pagamento','Descrição','Corrigido']];
       const empRows = buildReportRows({[emp]:byEmp[emp]}, payByEmp);
@@ -1489,12 +1604,13 @@ function exportExcel() {
   document.head.appendChild(script);
 }
 
-function exportPDF() {
+async function exportPDF() {
   const data = window._lastReportData;
   if (!data) return;
   const { byEmp, payByEmp, payTotal, from, to, empFilter } = data;
   const fromFmt = new Date(from+'T12:00:00').toLocaleDateString('pt-BR');
   const toFmt = new Date(to+'T12:00:00').toLocaleDateString('pt-BR');
+  const correctionLogs = await fetchCorrectionLogs(from, to, empFilter).catch(() => []);
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
   script.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk';
@@ -1591,6 +1707,31 @@ function exportPDF() {
       doc.setFontSize(9);
       doc.text(`R$ ${(payByEmp[emp]||0).toFixed(2)}`,178,y+21.5);
       y += 46;
+
+      const empCorrections = correctionLogs.filter(c => c.employee === emp);
+      if (empCorrections.length) {
+        if (y > H-50) { doc.addPage(); addPage(); y = 36; }
+        doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(...darkText);
+        doc.text('Correções aplicadas no período',14,y+6);
+        y += 10;
+        const fmtT = ts => ts ? new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : '—';
+        empCorrections.forEach(c => {
+          const rowH = c.reasoning ? 11 : 6;
+          if (y + rowH > H-25) { doc.addPage(); addPage(); y = 36; }
+          const d = new Date(c.date+'T12:00:00').toLocaleDateString('pt-BR');
+          const oldStr = c.old_time_log_id ? `${c.old_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.old_time)}` : '(novo registro)';
+          const newStr = c.new_time_log_id ? `${c.new_type==='clock_in'?'Entrada':'Saída'} ${fmtT(c.new_time)}` : '(removido)';
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...darkText);
+          doc.text(`${d}: ${oldStr} → ${newStr}`,14,y+4);
+          if (c.reasoning) {
+            doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(90,100,115);
+            doc.text(`Motivo: ${c.reasoning}`,14,y+9);
+          }
+          y += rowH;
+        });
+        y += 4;
+      }
+
       if (y > H-35) { doc.addPage(); addPage(); y = 40; }
       doc.setDrawColor(180,195,210); doc.setLineWidth(0.3);
       doc.line(14,y+10,90,y+10); doc.line(W-90,y+10,W-14,y+10);
