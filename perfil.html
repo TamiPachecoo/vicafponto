@@ -616,7 +616,11 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 </div>
 
+<script src="usage-tracker.js"></script>
 <script>
+vicafUsage.sessionStart('perfil');
+vicafUsage.moduleView('perfil');
+
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicaf2026!';
@@ -1025,6 +1029,7 @@ async function saveDados() {
     } else {
       await api('POST', 'perfil_funcionario', { employee_name: currentEmployee, ...data });
     }
+    vicafUsage.recordUpdate('perfil', 'employee_profile');
     toast('Dados salvos com sucesso', 'success');
     closeModal('modalDados');
     await loadPerfil(currentEmployee);
@@ -1161,6 +1166,7 @@ async function saveExame() {
     } else {
       await api('POST', 'exames_funcionario', data);
     }
+    vicafUsage.recordUpdate('perfil', 'medical_exam');
     toast('Exame salvo', 'success');
     closeModal('modalExame');
     await loadExames(currentEmployee);
@@ -1177,6 +1183,7 @@ async function deleteExame() {
       method: 'DELETE',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
     });
+    vicafUsage.action('perfil', 'delete_medical_exam', { entity: 'medical_exam' });
     toast('Exame excluído', 'warn');
     closeModal('modalExame');
     await loadExames(currentEmployee);
@@ -1324,6 +1331,7 @@ async function saveNR() {
     } else {
       await api('POST', 'nrs_funcionario', data);
     }
+    vicafUsage.recordUpdate('perfil', 'training_record');
     toast('NR salva', 'success');
     closeModal('modalNR');
     await loadNRs(currentEmployee);
@@ -1340,6 +1348,7 @@ async function deleteNR() {
       method: 'DELETE',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
     });
+    vicafUsage.action('perfil', 'delete_training_record', { entity: 'training_record' });
     toast('NR excluída', 'warn');
     closeModal('modalNR');
     await loadNRs(currentEmployee);

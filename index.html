@@ -472,7 +472,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </div>
 
+<script src="usage-tracker.js"></script>
 <script>
+vicafUsage.sessionStart('ponto');
+vicafUsage.moduleView('ponto');
+
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicaf2026!';
@@ -970,6 +974,7 @@ async function doPunch() {
   try {
     btn.style.opacity = '0.5';
     await api('POST', 'time_logs', { employee: selectedEmp, type, timestamp: new Date().toISOString(), date: today, notes: note||null });
+    vicafUsage.action('ponto', type === 'clock_in' ? 'clock_in' : 'clock_out', { entity: 'time_log' });
     toast(`${type==='clock_in'?'Entrada':'Saída'} registrada — ${selectedEmp}`, 'success');
     await Promise.all([loadTodayStatus(), updatePunchBtn(), loadTodayLog(selectedEmp)]);
   } catch(e) { toast('Erro ao registrar. Tente novamente.','error'); }
@@ -1005,6 +1010,7 @@ async function submitCorrection() {
   if (!date || !time) { toast('Preencha data e horário','error'); return; }
   try {
     await api('POST', 'solicitacao_correcao_ponto', { employee: selectedEmp, date, type, requested_time: time, note: note||null, status: 'pending' });
+    vicafUsage.action('ponto', 'request_correction', { entity: 'time_correction' });
     toast('Solicitação enviada ao supervisor','success');
     closeModal('correctionModal'); loadPendingRequests();
   } catch(e) { toast('Erro ao enviar solicitação','error'); }
@@ -1016,6 +1022,7 @@ async function submitMedical() {
   if (!date) { toast('Selecione a data','error'); return; }
   try {
     await api('POST', 'atestado_medico', { employee: selectedEmp, date, note: note||null });
+    vicafUsage.recordCreate('ponto', 'medical_leave');
     toast('Licença médica registrada','success');
     closeModal('medicalModal'); loadPendingRequests();
   } catch(e) { toast('Erro ao registrar licença','error'); }
@@ -1125,6 +1132,7 @@ async function approveCorrection() {
       method: 'PATCH', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ status: 'approved' })
     });
+    vicafUsage.action('ponto', 'approve_correction', { entity: 'time_correction' });
     toast('Correção aplicada com sucesso','success');
     closeModal('approveModal'); loadPendingRequests(); loadTodayLog();
   } catch(e) { toast('Erro ao aplicar correção','error'); console.error(e); }
@@ -1252,6 +1260,7 @@ async function saveEditDay() {
       }
     }
     toast('Registros do dia atualizados','success');
+    vicafUsage.action('ponto', 'edit_day_records', { entity: 'time_log' });
     closeModal('editDayModal');
     editDayContext = null; editDayRows = [];
     loadSummary();
@@ -1599,6 +1608,7 @@ async function exportExcel() {
       XLSX.utils.book_append_sheet(wb, wsEmp, emp.split(' ')[0].substring(0,31));
     });
     XLSX.writeFile(wb, `vicaf-ponto-${from}-${to}${empFilter?'-'+empFilter.split(' ')[0]:''}.xlsx`);
+    vicafUsage.fileExport('ponto', 'excel');
     toast('Excel baixado!','success');
   };
   document.head.appendChild(script);
@@ -1741,6 +1751,7 @@ async function exportPDF() {
       doc.text(emp,14,y+20);
       doc.save(`vicaf-ponto-${emp.split(' ')[0].toLowerCase()}-${from}-${to}.pdf`);
     });
+    vicafUsage.fileExport('ponto', 'pdf');
     toast('PDF gerado!','success');
   };
   document.head.appendChild(script);

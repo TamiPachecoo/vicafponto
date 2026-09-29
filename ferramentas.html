@@ -229,7 +229,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
   </div>
 </div>
 
+<script src="usage-tracker.js"></script>
 <script>
+vicafUsage.sessionStart('ferramentas');
+vicafUsage.moduleView('ferramentas');
+
 const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
 const ADMIN_PASSWORD = 'Vicaf2026!';
@@ -453,6 +457,7 @@ async function saveTool() {
   if (isNaN(quantidade) || quantidade < 0) { toast('Quantidade inválida', 'error'); return; }
   try {
     await api('PATCH', `ferramentas?id=eq.${currentEditId}`, { codigo: codigo || null, descricao, quantidade, conforme, observacao: observacao || null });
+    vicafUsage.recordUpdate('ferramentas', 'tool');
     toast('Ferramenta atualizada', 'success');
     closeModal('editModal');
     await loadTools();
@@ -470,6 +475,7 @@ function confirmDeleteTool() {
 async function deleteTool(id) {
   try {
     await api('DELETE', `ferramentas?id=eq.${id}`);
+    vicafUsage.action('ferramentas', 'delete_tool', { entity: 'tool' });
     toast('Ferramenta exluída', 'success');
     closeModal('editModal');
     await loadTools();
@@ -495,6 +501,7 @@ async function createTool() {
   if (isNaN(quantidade) || quantidade < 0) { toast('Quantidade inválida', 'error'); return; }
   try {
     await api('POST', 'ferramentas', { categoria, codigo: codigo || null, descricao, quantidade, conforme: null, observacao: null });
+    vicafUsage.recordCreate('ferramentas', 'tool');
     toast('Ferramenta adicionada', 'success');
     closeModal('addModal');
     await loadTools();

@@ -163,7 +163,11 @@ body {
 
 <div class="footer">Vicaf Hydro © 2026</div>
 
+<script src="usage-tracker.js"></script>
 <script>
+vicafUsage.sessionStart('menu');
+vicafUsage.moduleView('menu');
+
 // PWA install prompt
 let deferredPrompt = null;
 
@@ -175,6 +179,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 function installApp() {
   if (!deferredPrompt) return;
+  vicafUsage.action('menu', 'install_prompt_accept');
   deferredPrompt.prompt();
   deferredPrompt.userChoice.then(() => {
     deferredPrompt = null;
