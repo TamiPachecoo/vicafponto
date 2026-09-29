@@ -1,10 +1,11 @@
 // Vicaf Hydro — Service Worker
-const CACHE = 'vicaf-v2';
+const CACHE = 'vicaf-v3';
 const SHELL = [
   '/vicafponto/menu.html',
   '/vicafponto/index.html',
   '/vicafponto/perfil.html',
   '/vicafponto/ferramentas.html',
+  '/vicafponto/usage-tracker.js',
 ];
 
 self.addEventListener('install', e => {
