@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vicaf Hydro — FISQS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3347;
+  --accent: #3b82f6; --accent-dim: #1d3a6b; --green: #22c55e; --green-dim: #14532d;
+  --red: #ef4444; --red-dim: #7f1d1d; --amber: #f59e0b; --amber-dim: #451a03;
+  --text: #f1f5f9; --text2: #94a3b8; --text3: #475569; --radius: 16px; --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+.header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 20px; height: 20px; fill: var(--accent); }
+.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+.logo-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.mode-pill { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 20px; cursor: pointer; user-select: none; transition: all .2s; font-family: 'DM Sans', sans-serif; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); }
+.mode-pill.unlocked { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.main { padding: 16px 16px 110px; max-width: 480px; margin: 0 auto; width: 100%; }
+.search-wrap { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 4px 0 10px; }
+.search { position: relative; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text3); }
+.search input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 36px; font-size: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; }
+.search input::placeholder { color: var(--text3); }
+.search input:focus { outline: none; border-color: var(--accent); }
+.search input::-webkit-search-cancel-button { display: none; }
+.clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--surface2); border: none; color: var(--text2); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 12px; display: none; }
+.count { font-size: 11px; color: var(--text3); margin-top: 8px; font-family: 'DM Mono', monospace; }
+.az { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
+.az button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; }
+.az button:disabled { opacity: .3; cursor: default; }
+.letter { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--accent); padding: 14px 2px 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; scroll-margin-top: 80px; }
+.doc { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; color: var(--text); font-family: 'DM Sans', sans-serif; }
+.doc:active { transform: scale(0.99); }
+.file-ic { width: 38px; height: 44px; border-radius: 6px; background: var(--red-dim); color: var(--red); display: flex; align-items: flex-end; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; padding-bottom: 6px; flex-shrink: 0; }
+.file-ic.img { background: var(--green-dim); color: var(--green); }
+.file-ic.word { background: var(--accent-dim); color: var(--accent); }
+.doc-main { min-width: 0; flex: 1; }
+.doc-name { font-size: 13.5px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+.doc-name mark { background: var(--accent-dim); color: var(--text); border-radius: 3px; padding: 0 2px; }
+.doc-meta { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+.chev { width: 18px; height: 18px; fill: var(--text3); flex-shrink: 0; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; line-height: 1.6; }
+.fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px rgba(59,130,246,.4); display: none; align-items: center; justify-content: center; z-index: 100; }
+.fab:active { transform: scale(0.92); }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 600; transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; color: var(--text); opacity: 0; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error { border-color: var(--red); color: var(--red); }
+.toast.warn { border-color: var(--amber); color: var(--amber); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.modal-overlay.show { opacity: 1; pointer-events: all; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px 32px; width: 100%; max-width: 480px; transform: translateY(100%); transition: transform .3s cubic-bezier(.34,1.2,.64,1); max-height: 88vh; overflow-y: auto; }
+.modal-overlay.show .modal { transform: translateY(0); }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; line-height: 1.35; padding-right: 36px; overflow-wrap: anywhere; }
+.modal-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-bottom: 16px; }
+.modal-close { float: right; background: var(--surface2); border: none; color: var(--text2); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; }
+.modal input[type=text] { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 13px; color: var(--text); font-family: 'DM Sans', sans-serif; margin-bottom: 12px; }
+.modal input[type=text]:focus { outline: none; border-color: var(--accent); }
+.modal-label { font-size: 11px; color: var(--text3); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .6px; }
+.modal-btn { display: block; width: 100%; padding: 13px; border-radius: var(--radius-sm); border: none; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 8px; text-align: center; text-decoration: none; }
+.modal-btn.primary { background: var(--accent); color: #fff; }
+.modal-btn.ghost { background: var(--surface2); color: var(--text2); }
+.modal-btn.red { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+.modal-btn:disabled { opacity: .5; cursor: default; }
+.file-pick { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; cursor: pointer; }
+.file-pick input { display: none; }
+.file-pick-text { font-size: 13px; color: var(--text2); min-width: 0; overflow-wrap: anywhere; }
+.file-pick-text b { color: var(--text); font-weight: 500; }
+.hint { font-size: 11px; color: var(--text3); margin: -4px 0 12px; line-height: 1.5; }
+.admin-section { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px; }
+.confirm-box { background: var(--red-dim); border: 1px solid var(--red); border-radius: var(--radius-sm); padding: 12px; margin-top: 10px; font-size: 13px; line-height: 1.5; display: none; }
+.confirm-box .row { display: flex; gap: 8px; margin-top: 10px; }
+.confirm-box .row .modal-btn { margin-top: 0; }
+/* ── BOTTOM NAV + PWD MODAL ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 40; transition: transform .3s ease;
+}
+.bottom-nav.hidden { transform: translateY(100%); }
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 8px; cursor: pointer; text-decoration: none; color: var(--text3);
+  font-size: 10px; font-weight: 500; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+.nav-item.active { color: var(--accent); }
+.nav-item:active { transform: scale(0.95); }
+.pwd-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.pwd-overlay.show { opacity: 1; pointer-events: all; }
+.pwd-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px; width: 320px; max-width: 90vw;
+}
+.pwd-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.pwd-sub { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+.pwd-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px;
+  color: var(--text); font-family: 'DM Mono', monospace; margin-bottom: 12px; letter-spacing: 3px;
+}
+.pwd-input:focus { outline: none; border-color: var(--accent); }
+.pwd-error { font-size: 12px; color: var(--red); margin-bottom: 10px; display: none; }
+.pwd-btns { display: flex; gap: 10px; }
+.pwd-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.pwd-btn.cancel { background: var(--surface2); color: var(--text2); }
+.pwd-btn.confirm { background: var(--accent); color: #fff; }
+.pwd-btn:disabled { opacity: .5; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Vicaf Hydro</div>
+      <div class="logo-sub">FISQS</div>
+    </div>
+  </div>
+  <div class="mode-pill" id="modePill" onclick="toggleAdmin()">&#x1F512; Visualizar</div>
+</div>
+
+<div class="main">
+  <div class="search-wrap">
+    <div class="search">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="search" id="searchInput" placeholder="Buscar produto ou documento..." autocomplete="off" oninput="renderList()">
+      <button class="clear-btn" id="clearBtn" onclick="clearSearch()" aria-label="Limpar busca">&#x2715;</button>
+    </div>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="az" id="az"></div>
+  <div id="listArea"><div class="empty-state">Carregando documentos...</div></div>
+</div>
+
+<button class="fab" id="fabAdd" onclick="openUploadModal()" aria-label="Enviar documento">+</button>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottomNav">
+  <a class="nav-item" href="menu.html"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Menu</a>
+  <a class="nav-item" href="index.html"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>Ponto</a>
+  <a class="nav-item" href="ferramentas.html"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Ferramentas</a>
+  <a class="nav-item active" href="fisqs.html"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>FISQS</a>
+  <a class="nav-item" href="perfil.html"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>Perfil</a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- PWD MODAL -->
+<div class="pwd-overlay" id="pwdOverlay">
+  <div class="pwd-box">
+    <div class="pwd-title">&#x1F512; Modo Edição</div>
+    <div class="pwd-sub">Digite a senha do administrador</div>
+    <input class="pwd-input" type="password" id="pwdInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter') confirmPwd()">
+    <div class="pwd-error" id="pwdError">Senha incorreta. Tente novamente.</div>
+    <div class="pwd-btns">
+      <button class="pwd-btn cancel" onclick="cancelPwd()">Cancelar</button>
+      <button class="pwd-btn confirm" id="pwdConfirmBtn" onclick="confirmPwd()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOCUMENT MODAL -->
+<div class="modal-overlay" id="docModal" onclick="if(event.target===this) closeModal('docModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('docModal')" aria-label="Fechar">&#x2715;</button>
+    <div class="modal-title" id="docTitle"></div>
+    <div class="modal-sub" id="docMeta"></div>
+    <a class="modal-btn primary" id="docOpen" href="#" target="_blank" rel="noopener" onclick="vicafUsage.action('fisqs', 'open_document')">Abrir documento</a>
+    <button class="modal-btn ghost" onclick="closeModal('docModal')">Voltar à lista</button>
+    <div class="admin-section" id="docAdmin" style="display:none">
+      <div class="modal-label">Nome do documento</div>
+      <input type="text" id="docRename" maxlength="200">
+      <button class="modal-btn primary" id="renameBtn" onclick="renameDoc()">Salvar nome</button>
+      <button class="modal-btn red" onclick="document.getElementById('confirmDelete').style.display='block'">Excluir documento</button>
+      <div class="confirm-box" id="confirmDelete">
+        Excluir este documento? Ele some da lista para todos e o arquivo é apagado.
+        <div class="row">
+          <button class="modal-btn ghost" onclick="document.getElementById('confirmDelete').style.display='none'">Cancelar</button>
+          <button class="modal-btn red" id="deleteBtn" onclick="deleteDoc()">Excluir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('uploadModal')" aria-label="Fechar">&#x2715;</button>
+    <div class="modal-title" style="margin-bottom:16px">Enviar documento</div>
+    <label class="file-pick">
+      <input type="file" id="uploadFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="onFilePicked()">
+      <div class="file-ic">PDF</div>
+      <div class="file-pick-text" id="filePickText">Toque para escolher o arquivo<br><span style="font-size:11px;color:var(--text3)">PDF, foto ou Word · até 50 MB</span></div>
+    </label>
+    <div class="modal-label">Nome do documento</div>
+    <input type="text" id="uploadName" maxlength="200" placeholder="Ex: FISPQ - Cloro Granulado 65%">
+    <div class="hint">A lista fica em ordem alfabética pelo nome do produto. "FISPQ - Cloro" aparece na letra C.</div>
+    <button class="modal-btn primary" id="uploadBtn" onclick="uploadDoc()">Enviar</button>
+  </div>
+</div>
+
+<script src="usage-tracker.js"></script>
+<script>
+vicafUsage.sessionStart('fisqs');
+vicafUsage.moduleView('fisqs');
+
+const SUPABASE_URL = 'https://xuonzwvqqwbgcedidyie.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_90r8S_3VdagojDIoPHe5Gg_Ief-vsnu';
+const BUCKET = 'fisqs';
+const MAX_BYTES = 50 * 1024 * 1024;
+const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
+
+// The admin password is checked server-side by the fisqs_* RPCs; once it
+// passes, it is kept in memory only so later writes can be authorized.
+let adminSenha = null;
+let allDocs = [];
+let currentDoc = null;
+
+const authHeaders = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+
+async function rpc(name, params) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params || {})
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function fileUrl(path) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(path)}`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── SCROLL HIDE/SHOW NAV ──
+(function() {
+  let lastY = 0;
+  const nav = document.getElementById('bottomNav');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > lastY && y > 60) nav.classList.add('hidden');
+    else nav.classList.remove('hidden');
+    lastY = y;
+  }, { passive: true });
+})();
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── ADMIN MODE ──
+function toggleAdmin() {
+  if (adminSenha) {
+    adminSenha = null;
+    updateAdminUI();
+    toast('Modo visualização ativado', 'warn');
+    return;
+  }
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('pwdError').style.display = 'none';
+  document.getElementById('pwdOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('pwdInput').focus(), 150);
+}
+
+function cancelPwd() {
+  document.getElementById('pwdOverlay').classList.remove('show');
+}
+
+async function confirmPwd() {
+  const input = document.getElementById('pwdInput');
+  const btn = document.getElementById('pwdConfirmBtn');
+  const senha = input.value;
+  if (!senha) return;
+  btn.disabled = true;
+  try {
+    const ok = await rpc('fisqs_check_admin', { p_senha: senha });
+    if (ok) {
+      adminSenha = senha;
+      document.getElementById('pwdOverlay').classList.remove('show');
+      updateAdminUI();
+      toast('Modo edição ativado', 'success');
+    } else {
+      document.getElementById('pwdError').style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  } catch (e) {
+    toast('Erro de conexão. Tente novamente.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function updateAdminUI() {
+  const pill = document.getElementById('modePill');
+  if (adminSenha) {
+    pill.textContent = '\u{1F513} Editando';
+    pill.classList.add('unlocked');
+    document.getElementById('fabAdd').style.display = 'flex';
+  } else {
+    pill.textContent = '\u{1F512} Visualizar';
+    pill.classList.remove('unlocked');
+    document.getElementById('fabAdd').style.display = 'none';
+  }
+}
+
+// A wrong/changed password on a write means admin mode is no longer valid.
+function handleWriteError(e, fallbackMsg) {
+  if (String(e.message).includes('senha_incorreta')) {
+    adminSenha = null;
+    updateAdminUI();
+    toast('Senha inválida. Entre no modo edição de novo.', 'error');
+  } else {
+    toast(fallbackMsg, 'error');
+  }
+}
+
+// ── LIST ──
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// Sort by product name: "FISPQ - Cloro Granulado" files under C.
+const sortKey = name => {
+  const i = name.indexOf(' - ');
+  return (i >= 0 ? name.slice(i + 3) : name).trim() || name;
+};
+
+function formatSize(bytes) {
+  if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+  return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function iconClass(tipo) {
+  if (tipo === 'JPG' || tipo === 'JPEG' || tipo === 'PNG') return 'file-ic img';
+  if (tipo === 'DOC' || tipo === 'DOCX') return 'file-ic word';
+  return 'file-ic';
+}
+
+function highlight(text, q) {
+  if (!q) return escapeHtml(text);
+  // norm() keeps string length for Latin text, so indexes line up with the original.
+  const i = norm(text).indexOf(q);
+  if (i < 0) return escapeHtml(text);
+  return escapeHtml(text.slice(0, i)) + '<mark>' + escapeHtml(text.slice(i, i + q.length)) + '</mark>' + escapeHtml(text.slice(i + q.length));
+}
+
+let searchLogged = false;
+function renderList() {
+  const raw = document.getElementById('searchInput').value.trim();
+  const q = norm(raw);
+  document.getElementById('clearBtn').style.display = q ? 'block' : 'none';
+  if (q && !searchLogged) { vicafUsage.search('fisqs', 'search_bar'); searchLogged = true; }
+
+  const shown = allDocs.filter(d => !q || norm(d.nome).includes(q));
+  document.getElementById('count').textContent = q
+    ? `${shown.length} de ${allDocs.length} documentos`
+    : `${allDocs.length} documento${allDocs.length === 1 ? '' : 's'}`;
+
+  const groups = {};
+  shown.forEach(d => {
+    const first = norm(sortKey(d.nome)).charAt(0).toUpperCase();
+    const L = /[A-Z]/.test(first) ? first : '#';
+    (groups[L] = groups[L] || []).push(d);
+  });
+
+  document.getElementById('az').innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(L =>
+    `<button ${groups[L] ? `onclick="jumpTo('${L}')"` : 'disabled'} aria-label="Ir para ${L}">${L}</button>`
+  ).join('');
+
+  const area = document.getElementById('listArea');
+  if (!allDocs.length) {
+    area.innerHTML = '<div class="empty-state">Nenhum documento ainda.<br>Toque em "Visualizar", entre com a senha do administrador e use o botão + para enviar o primeiro.</div>';
+    return;
+  }
+  if (!shown.length) {
+    area.innerHTML = `<div class="empty-state">Nenhum documento encontrado para "${escapeHtml(raw)}".<br>Tente o nome do produto, como "cloro" ou "ácido".</div>`;
+    return;
+  }
+  const letters = Object.keys(groups).sort((a, b) => a === '#' ? -1 : b === '#' ? 1 : a.localeCompare(b));
+  area.innerHTML = letters.map(L =>
+    `<div class="letter" id="l-${L}">${L}</div>` + groups[L].map(d =>
+      `<button class="doc" onclick="openDoc('${d.id}')">
+        <div class="${iconClass(d.tipo)}">${escapeHtml(d.tipo)}</div>
+        <div class="doc-main"><div class="doc-name">${highlight(d.nome, q)}</div><div class="doc-meta">${escapeHtml(d.tipo)} · ${formatSize(d.tamanho)}</div></div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      </button>`).join('')
+  ).join('');
+}
+
+function jumpTo(L) {
+  const el = document.getElementById('l-' + L);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  renderList();
+  document.getElementById('searchInput').focus();
+}
+
+async function loadDocs() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fisqs?select=id,nome,arquivo_path,tipo,tamanho,updated_at`, { headers: authHeaders });
+    if (!res.ok) throw new Error(await res.text());
+    allDocs = (await res.json()).sort((a, b) =>
+      sortKey(a.nome).localeCompare(sortKey(b.nome), 'pt-BR', { sensitivity: 'base', numeric: true }));
+    renderList();
+  } catch (e) {
+    document.getElementById('listArea').innerHTML = '<div class="empty-state">Erro ao carregar documentos. Verifique a conexão.</div>';
+  }
+}
+
+// ── DOCUMENT DETAIL ──
+function openDoc(id) {
+  const d = allDocs.find(x => x.id === id);
+  if (!d) return;
+  currentDoc = d;
+  document.getElementById('docTitle').textContent = d.nome;
+  document.getElementById('docMeta').textContent = `${d.tipo} · ${formatSize(d.tamanho)} · Atualizado em ${formatDate(d.updated_at)}`;
+  document.getElementById('docOpen').href = fileUrl(d.arquivo_path);
+  document.getElementById('docAdmin').style.display = adminSenha ? 'block' : 'none';
+  document.getElementById('docRename').value = d.nome;
+  document.getElementById('confirmDelete').style.display = 'none';
+  openModal('docModal');
+}
+
+async function renameDoc() {
+  if (!adminSenha || !currentDoc) return;
+  const nome = document.getElementById('docRename').value.trim();
+  if (!nome) { toast('Digite um nome', 'error'); return; }
+  const btn = document.getElementById('renameBtn');
+  btn.disabled = true;
+  try {
+    await rpc('fisqs_rename', { p_senha: adminSenha, p_id: currentDoc.id, p_nome: nome });
+    vicafUsage.recordUpdate('fisqs', 'document');
+    toast('Nome atualizado', 'success');
+    closeModal('docModal');
+    await loadDocs();
+  } catch (e) {
+    handleWriteError(e, 'Erro ao salvar nome');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteDoc() {
+  if (!adminSenha || !currentDoc) return;
+  const btn = document.getElementById('deleteBtn');
+  btn.disabled = true;
+  try {
+    const path = await rpc('fisqs_delete', { p_senha: adminSenha, p_id: currentDoc.id });
+    // The list entry is already gone; removing the file itself is best effort.
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodeURIComponent(path)}`, { method: 'DELETE', headers: authHeaders }).catch(() => {});
+    vicafUsage.action('fisqs', 'delete_document', { entity: 'document' });
+    toast('Documento excluído', 'success');
+    closeModal('docModal');
+    await loadDocs();
+  } catch (e) {
+    handleWriteError(e, 'Erro ao excluir');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── UPLOAD ──
+function fileExt(name) {
+  const i = name.lastIndexOf('.');
+  return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
+}
+
+function openUploadModal() {
+  if (!adminSenha) return;
+  document.getElementById('uploadFile').value = '';
+  document.getElementById('uploadName').value = '';
+  document.getElementById('filePickText').innerHTML = 'Toque para escolher o arquivo<br><span style="font-size:11px;color:var(--text3)">PDF, foto ou Word · até 50 MB</span>';
+  openModal('uploadModal');
+}
+
+function onFilePicked() {
+  const f = document.getElementById('uploadFile').files[0];
+  if (!f) return;
+  document.getElementById('filePickText').innerHTML = `<b>${escapeHtml(f.name)}</b><br><span style="font-size:11px;color:var(--text3)">${formatSize(f.size)}</span>`;
+  const nameInput = document.getElementById('uploadName');
+  if (!nameInput.value.trim()) nameInput.value = f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
+}
+
+async function uploadDoc() {
+  if (!adminSenha) return;
+  const f = document.getElementById('uploadFile').files[0];
+  const nome = document.getElementById('uploadName').value.trim();
+  if (!f) { toast('Escolha um arquivo', 'error'); return; }
+  if (!nome) { toast('Digite o nome do documento', 'error'); return; }
+  const ext = fileExt(f.name);
+  if (!ALLOWED_EXT.includes(ext)) { toast('Use PDF, JPG, PNG ou Word', 'error'); return; }
+  if (f.size > MAX_BYTES) { toast('Arquivo maior que 50 MB', 'error'); return; }
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const [slot] = await rpc('fisqs_begin_upload', { p_senha: adminSenha, p_nome: nome, p_ext: ext, p_tipo: f.type, p_tamanho: f.size });
+    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodeURIComponent(slot.arquivo_path)}`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': f.type || 'application/octet-stream', 'x-upsert': 'false' },
+      body: f
+    });
+    if (!up.ok) throw new Error(await up.text());
+    await rpc('fisqs_finish_upload', { p_senha: adminSenha, p_id: slot.id });
+    vicafUsage.recordCreate('fisqs', 'document');
+    toast('Documento enviado', 'success');
+    closeModal('uploadModal');
+    await loadDocs();
+  } catch (e) {
+    handleWriteError(e, 'Erro ao enviar. Tente novamente.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  }
+}
+
+updateAdminUI();
+loadDocs();
+</script>
+</body>
+</html>
