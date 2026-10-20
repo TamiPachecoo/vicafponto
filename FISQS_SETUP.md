@@ -4,7 +4,7 @@ Adds a mobile-first document catalog to the existing HTML app, accessible throug
 
 ## Current activation status
 
-Implementation and local permission tests are included. Production is not configured: the connected Supabase account cannot access VICAF project `xuonzwvqqwbgcedidyie`. Do not merge/deploy the new navigation until the steps below and a live smoke test succeed.
+Implementation and local permission tests are included. The FISQS schema and private bucket were activated on VICAF project `xuonzwvqqwbgcedidyie`. Document import and user provisioning are still pending; do not merge/deploy the new navigation until they and a live smoke test succeed. The initial protected importer deployment was rejected by automatic approval review and no import endpoint was created.
 
 ## Access model
 
@@ -15,7 +15,7 @@ Readers can search and view registered revisions. Supervisors/admins can upload 
 ## Activate on the correct backend
 
 1. Connect a Supabase account with access to VICAF project `xuonzwvqqwbgcedidyie` (not AgencyOS). Verify project ref before applying anything.
-2. Inspect for pre-existing `fisqs_*` objects. Run `db/fisqs_setup.sql` once using the project's SQL editor or migration tooling. It is transactional and additive. If tables already exist, stop and inspect rather than dropping/recreating them. If using Supabase CLI migrations, create the migration with `supabase migration new fisqs_catalog`, copy the SQL into that file and apply via the project's normal process; do not apply both paths. Run Supabase security/performance advisors after setup.
+2. Inspect for pre-existing `fisqs_*` objects. Run `db/fisqs_setup.sql` once using the project's SQL editor or migration tooling. It is transactional and additive. If tables already exist, stop and inspect rather than dropping/recreating them. If using Supabase CLI migrations, create the migration with `supabase migration new fisqs_catalog`, copy the SQL into that file and apply via the project's normal process; do not apply both paths. Also apply `db/fisqs_access_hardening.sql` to override Supabase default privileges and add reviewer/uploader indexes. Both setup files have already been applied to VICAF; inspect migration history before running them again. Run Supabase security/performance advisors after setup.
 3. Provision users through Supabase Auth's admin invite flow and let each user set their password. Use authorized company email addresses. Add each verified Auth user to the FISQS allowlist with the appropriate role, for example:
 
 ```sql

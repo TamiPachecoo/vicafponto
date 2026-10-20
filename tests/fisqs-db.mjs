@@ -15,7 +15,11 @@ create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,na
 alter table storage.objects enable row level security;
 grant select,insert,delete on storage.objects to authenticated;
 grant all on storage.objects,storage.buckets to service_role;`);
+await db.exec(`alter default privileges in schema public grant execute on functions to anon, authenticated;`);
 await db.exec(readFileSync('db/fisqs_setup.sql','utf8'));
+await db.exec(readFileSync('db/fisqs_access_hardening.sql','utf8'));
+assert.equal((await db.query("select has_function_privilege('anon','public.fisqs_register(uuid,jsonb,jsonb)','execute') as allowed")).rows[0].allowed,false);
+console.log('PASS explicit function grants override Supabase default privileges');
 const reader='00000000-0000-0000-0000-000000000001',supervisor='00000000-0000-0000-0000-000000000002',outsider='00000000-0000-0000-0000-000000000003';
 await db.exec(`insert into auth.users values ('${reader}'),('${supervisor}'),('${outsider}');
 insert into fisqs_members(user_id,role) values ('${reader}','reader'),('${supervisor}','supervisor');`);
