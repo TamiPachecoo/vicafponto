@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vicaf Hydro — FISPQ</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1117">
+<link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="fisqs.css">
+<script src="fisqs.js" defer></script>
+</head>
+<body>
+<header><a href="menu.html" class="brand">Vicaf Hydro <span>Documentos de produtos químicos</span></a><button id="logout" hidden>Sair</button></header>
+<main>
+<div class="heading"><div><p class="eyebrow">CONSULTA EM CAMPO</p><h1>FISPQ</h1></div><button id="add" class="primary" hidden>+ Adicionar FISPQ</button></div>
+<section id="login-panel" class="panel">
+<h2>Acessar documentos</h2><p>Entre com sua conta VICAF. A equipe consulta os documentos; supervisores também podem adicionar novas fichas e revisões.</p>
+<form id="login-form"><label>E-mail<input id="email" type="email" autocomplete="username" required maxlength="254"></label><label>Senha<input id="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Entrar</button></form>
+<p class="muted">O administrador precisa liberar sua conta para o módulo FISPQ.</p>
+</section>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="catalog" hidden>
+<div class="filters"><label class="search">Buscar produto, fabricante ou código<input id="search" type="search" placeholder="Ex.: LOCTITE 271, óleo, diluente…"></label><label>Categoria<select id="category"><option value="">Todas as categorias</option></select></label></div>
+<p id="count" class="muted"></p><div id="results" class="results"></div><button id="retry" hidden>Tentar novamente</button>
+</section>
+</main>
+<nav class="bottom-nav" aria-label="Navegação principal"><a href="menu.html">Menu</a><a href="index.html">Ponto</a><a href="ferramentas.html">Ferramentas</a><a href="perfil.html">Perfil</a><a href="fisqs.html" aria-current="page">FISPQ</a></nav>
+<dialog id="detail"><div class="dialog-head"><h2 id="detail-title"></h2><button data-close="detail" aria-label="Fechar detalhes">Fechar</button></div><div id="detail-body"></div></dialog>
+<dialog id="viewer"><div class="dialog-head"><h2 id="viewer-title">Documento original</h2><button data-close="viewer">Fechar</button></div><p id="viewer-status" role="status"></p><div id="viewer-links" class="actions"></div><iframe id="pdf-frame" title="Documento PDF original" hidden></iframe></dialog>
+<dialog id="editor"><div class="dialog-head"><h2 id="editor-title">Adicionar FISPQ</h2><button id="close-editor" data-close="editor">Cancelar</button></div>
+<form id="upload-form">
+<label>Produto<select id="product-choice"><option value="">Cadastrar novo produto</option></select></label>
+<div id="new-product" class="form-grid"><label>Nome do produto<input name="name" maxlength="200" required></label><label>Fabricante<input name="manufacturer" maxlength="200"></label><label>Código<input name="code" maxlength="100"></label><label>Componente / variante<input name="component" placeholder="Ex.: A, B, grau 68" maxlength="100"></label><label>Categoria<select name="category"><option>Tintas</option><option>Solventes</option><option>Lubrificantes</option><option>Adesivos e vedantes</option><option>Outros</option></select></label></div>
+<label>Tipo de documento<select name="kind"><option value="safety">Ficha de segurança</option><option value="technical">Ficha técnica</option><option value="certificate">Certificado / documentos de lote</option><option value="other">Outros</option></select></label>
+<p class="muted">Para um produto existente, adicionar o mesmo tipo cria uma nova versão e preserva o histórico. Confira a revisão impressa no documento antes de substituir a versão atual.</p>
+<div class="form-grid"><label>Data da revisão (se informada)<input name="revision_date" type="date"></label><label>Revisão / versão no documento<input name="revision_label" maxlength="100" placeholder="Ex.: Revisão 02"></label></div>
+<label>Documento PDF (até 15 MB)<input name="pdf" type="file" accept="application/pdf,.pdf" required></label>
+<label class="check"><input name="scanned" type="checkbox"> PDF digitalizado / imagem</label>
+<label>Resumo revisado (opcional)<textarea name="summary" maxlength="10000" rows="5" placeholder="Transcreva apenas informações conferidas no documento original."></textarea></label>
+<label class="check"><input name="reviewed" type="checkbox"> Conferi o resumo com o documento original.</label>
+<p class="muted">É possível salvar apenas o PDF. Não é necessário preencher um resumo.</p>
+<p id="upload-status" role="status" aria-live="polite"></p><button id="save" class="primary" type="submit">Salvar documento</button>
+</form></dialog>
+</body></html>
