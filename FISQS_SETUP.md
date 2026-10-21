@@ -8,7 +8,7 @@ Implementation and local permission tests are included. The FISPQ schema and pri
 
 ## Access model
 
-The existing app has a browser-only shared supervisor password. FISPQ does not reuse it for upload authorization. This new module uses Supabase Auth email/password and an explicit `fisqs_members` allowlist for readers, supervisors and admins. All employees accessing FISPQ need a provisioned account; this login applies only to FISPQ. Sessions stay in memory and are cleared on reload/sign-out. There is no self-registration or self-promotion UI.
+FISPQ uses a temporary Supabase Auth session created only after an employee verifies the same four-digit PIN used by Ponto. The database maps an active employee to `reader` or `supervisor` from `usuario.grupo`; only supervisors can upload. Sessions stay in memory and are cleared on reload/sign-out. There is no self-registration or self-promotion UI.
 
 Readers can search and view registered revisions. Supervisors/admins can upload new PDFs, register products, add revisions and optionally write source-checked summaries. Members cannot delete registered files or rewrite revision history. Member provisioning is an administrator operation in the database, not an in-app supervisor feature. Revoking a membership blocks subsequent API calls; previously issued document URLs last up to five minutes.
 
