@@ -123,7 +123,7 @@
     $('upload-form').reset();$('product-choice').replaceChildren(new Option('Cadastrar novo produto',''),...products.map(p=>new Option([p.name,p.component].filter(Boolean).join(' · '),p.id)));
     $('product-choice').value=productId;$('upload-form').elements.kind.value=kind;toggleProductFields();message('upload-status','');$('editor').showModal();
   }
-  function toggleProductFields(){const existing=!!$('product-choice').value;$('new-product').hidden=existing;$('upload-form').elements.name.required=!existing;$('editor-title').textContent=existing?'Adicionar documento / revisão':'Adicionar FISQS';}
+  function toggleProductFields(){const existing=!!$('product-choice').value;$('new-product').hidden=existing;$('upload-form').elements.name.required=!existing;$('editor-title').textContent=existing?'Adicionar documento / revisão':'Adicionar FISPQ';}
   async function save(event){
     event.preventDefault();if(saving||!canWrite())return;
     const f=$('upload-form').elements,file=f.pdf.files[0],productId=$('product-choice').value;
@@ -155,11 +155,11 @@
       const data=await raw('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})},null);
       session={...data,expires_at:Date.now()/1000+data.expires_in};
       const membership=await request('/rest/v1/fisqs_members?select=role&user_id=eq.'+encodeURIComponent(data.user.id));
-      if(!membership.length)throw new Error('Sua conta ainda não foi liberada para FISQS. Solicite acesso ao administrador.');
+      if(!membership.length)throw new Error('Sua conta ainda não foi liberada para FISPQ. Solicite acesso ao administrador.');
       role=membership[0].role;$('login-panel').hidden=true;$('catalog').hidden=false;$('logout').hidden=false;$('add').hidden=!canWrite();await load();
     }catch(e){if(session)await raw('/auth/v1/logout?scope=local',{method:'POST'}).catch(()=>{});lock();message('status',e.message,true);}finally{$('password').value='';button.disabled=false;}
   });
-  $('logout').addEventListener('click',async()=>{if(saving)return;try{await request('/auth/v1/logout?scope=local',{method:'POST'});}catch{}finally{lock();message('status','Você saiu do módulo FISQS.');}});
+  $('logout').addEventListener('click',async()=>{if(saving)return;try{await request('/auth/v1/logout?scope=local',{method:'POST'});}catch{}finally{lock();message('status','Você saiu do módulo FISPQ.');}});
   $('search').addEventListener('input',render);$('category').addEventListener('change',render);$('retry').addEventListener('click',load);$('add').addEventListener('click',()=>editor());$('product-choice').addEventListener('change',toggleProductFields);$('upload-form').addEventListener('submit',save);
   $('editor').addEventListener('cancel',e=>{if(saving)e.preventDefault();});
   $('viewer').addEventListener('close',()=>{++signing;$('pdf-frame').removeAttribute('src');});

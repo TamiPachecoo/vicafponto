@@ -1,14 +1,14 @@
-# VICAF FISQS
+# VICAF FISPQ
 
-Adds a mobile-first document catalog to the existing HTML app, accessible through a new FISQS card in Menu. Existing Ponto, Ferramentas and Perfil pages are unchanged. The private import manifest describes the supplied PDFs with SHA-256 checksums. Original files and the private manifest are not committed to this public repository.
+Adds a mobile-first document catalog to the existing HTML app, accessible through a new FISPQ card in Menu. Existing Ponto, Ferramentas and Perfil pages are unchanged. The private import manifest describes the supplied PDFs with SHA-256 checksums. Original files and the private manifest are not committed to this public repository.
 
 ## Current activation status
 
-Implementation and local permission tests are included. The FISQS schema and private bucket were activated on VICAF project `xuonzwvqqwbgcedidyie`. Document import and user provisioning are still pending; do not merge/deploy the new navigation until they and a live smoke test succeed. The initial protected importer deployment was rejected by automatic approval review and no import endpoint was created.
+Implementation and local permission tests are included. The FISPQ schema and private bucket (internally named `fisqs`) were activated on VICAF project `xuonzwvqqwbgcedidyie`. Document import is complete; provision users and complete a live smoke test before release. No import endpoint or Edge Function was created.
 
 ## Access model
 
-The existing app has a browser-only shared supervisor password. FISQS does not reuse it for upload authorization. This new module uses Supabase Auth email/password and an explicit `fisqs_members` allowlist for readers, supervisors and admins. All employees accessing FISQS need a provisioned account; this login applies only to FISQS. Sessions stay in memory and are cleared on reload/sign-out. There is no self-registration or self-promotion UI.
+The existing app has a browser-only shared supervisor password. FISPQ does not reuse it for upload authorization. This new module uses Supabase Auth email/password and an explicit `fisqs_members` allowlist for readers, supervisors and admins. All employees accessing FISPQ need a provisioned account; this login applies only to FISPQ. Sessions stay in memory and are cleared on reload/sign-out. There is no self-registration or self-promotion UI.
 
 Readers can search and view registered revisions. Supervisors/admins can upload new PDFs, register products, add revisions and optionally write source-checked summaries. Members cannot delete registered files or rewrite revision history. Member provisioning is an administrator operation in the database, not an in-app supervisor feature. Revoking a membership blocks subsequent API calls; previously issued document URLs last up to five minutes.
 

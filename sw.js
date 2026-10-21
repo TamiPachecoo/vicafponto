@@ -1,5 +1,5 @@
 // Vicaf Hydro — cache the app shell, never authenticated data or signed PDFs.
-const CACHE = 'vicaf-v4-fisqs';
+const CACHE = 'vicaf-v5-fispq';
 const SHELL = ['menu.html','index.html','perfil.html','ferramentas.html','fisqs.html','fisqs.css','fisqs.js','usage-tracker.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
