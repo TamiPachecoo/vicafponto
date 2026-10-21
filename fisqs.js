@@ -38,6 +38,10 @@
       if (batch.length < 500) return rows;
     }
   }
+  async function loadEmployees() {
+    const rows = await raw('/rest/v1/usuario?status=eq.active&select=full_name&order=full_name.asc', {}, null);
+    $('employee').replaceChildren(new Option('Selecione seu nome',''), ...rows.map(row => new Option(row.full_name, row.full_name)));
+  }
   async function load() {
     const generation = authGeneration;
     message('status','Carregando documentos…'); $('retry').hidden = true;
@@ -152,17 +156,20 @@
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.submitter;button.disabled=true;message('status','Entrando…');
     try{
-      const data=await raw('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})},null);
+      const employee=$('employee').value, pin=$('pin').value;
+      if(!employee || !/^\d{4}$/.test(pin))throw new Error('Selecione seu nome e digite seu PIN de 4 dígitos.');
+      const data=await raw('/auth/v1/signup',{method:'POST',body:JSON.stringify({data:{module:'fispq'}})},null);
       session={...data,expires_at:Date.now()/1000+data.expires_in};
-      const membership=await request('/rest/v1/fisqs_members?select=role&user_id=eq.'+encodeURIComponent(data.user.id));
-      if(!membership.length)throw new Error('Sua conta ainda não foi liberada para FISPQ. Solicite acesso ao administrador.');
-      role=membership[0].role;$('login-panel').hidden=true;$('catalog').hidden=false;$('logout').hidden=false;$('add').hidden=!canWrite();await load();
-    }catch(e){if(session)await raw('/auth/v1/logout?scope=local',{method:'POST'}).catch(()=>{});lock();message('status',e.message,true);}finally{$('password').value='';button.disabled=false;}
+      const access=await request('/rest/v1/rpc/fisqs_pin_login',{method:'POST',body:JSON.stringify({p_employee_name:employee,p_pin:pin})});
+      role=access[0]?.role;if(!role)throw new Error('Não foi possível confirmar seu acesso.');
+      $('login-panel').hidden=true;$('catalog').hidden=false;$('logout').hidden=false;$('add').hidden=!canWrite();await load();
+    }catch(e){if(session)await raw('/auth/v1/logout?scope=local',{method:'POST'}).catch(()=>{});lock();message('status',e.message,true);}finally{$('pin').value='';button.disabled=false;}
   });
   $('logout').addEventListener('click',async()=>{if(saving)return;try{await request('/auth/v1/logout?scope=local',{method:'POST'});}catch{}finally{lock();message('status','Você saiu do módulo FISPQ.');}});
   $('search').addEventListener('input',render);$('category').addEventListener('change',render);$('retry').addEventListener('click',load);$('add').addEventListener('click',()=>editor());$('product-choice').addEventListener('change',toggleProductFields);$('upload-form').addEventListener('submit',save);
   $('editor').addEventListener('cancel',e=>{if(saving)e.preventDefault();});
   $('viewer').addEventListener('close',()=>{++signing;$('pdf-frame').removeAttribute('src');});
   document.addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;if(button.dataset.close)$(button.dataset.close).close();if(button.dataset.product)showDetails(button.dataset.product);if(button.dataset.open)view(button.dataset.open);if(button.dataset.update)editor(button.dataset.update,button.dataset.kind||'safety');});
+  loadEmployees().catch(()=>message('status','Não foi possível carregar a lista de funcionários.',true));
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
