@@ -3,14 +3,18 @@
   const button = document.getElementById('more-nav');
   const menu = document.getElementById('more-menu');
   if (!button || !menu) return;
+  let closeTimer;
   const close = () => {
+    clearTimeout(closeTimer);
     menu.hidden = true;
     button.setAttribute('aria-expanded', 'false');
   };
   button.addEventListener('click', () => {
     const open = menu.hidden;
+    clearTimeout(closeTimer);
     menu.hidden = !open;
     button.setAttribute('aria-expanded', String(open));
+    if (open) closeTimer = setTimeout(close, 3500);
   });
   menu.addEventListener('pointerdown', close, true);
   menu.addEventListener('click', close);
