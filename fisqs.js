@@ -33,7 +33,7 @@
   async function allRows(table, order) {
     let rows = [];
     for (let offset = 0; ; offset += 500) {
-      const batch = await request(`/rest/v1/${table}?select=*&order=${order}&offset=${offset}&limit=500`);
+      const batch = await raw(`/rest/v1/${table}?select=*&order=${order}&offset=${offset}&limit=500`, {}, null);
       rows.push(...batch);
       if (batch.length < 500) return rows;
     }
@@ -47,7 +47,7 @@
     message('status','Carregando documentos…'); $('retry').hidden = true;
     try {
       const data = await Promise.all([allRows('fisqs_products','name.asc,id.asc'), allRows('fisqs_revisions','created_at.desc,id.asc')]);
-      if (generation !== authGeneration || !session) return;
+      if (generation !== authGeneration) return;
       [products,revisions] = data;
       const selected = $('category').value;
       $('category').replaceChildren(new Option('Todas as categorias',''), ...[...new Set(products.map(p=>p.category))].sort().map(v=>new Option(v,v)));
@@ -110,7 +110,7 @@
     $('viewer-links').replaceChildren();$('pdf-frame').hidden=true;$('pdf-frame').removeAttribute('src');
     $('viewer-title').textContent=revision.original_name;message('viewer-status','Abrindo documento…');$('viewer').showModal();
     try{
-      const result=await request('/storage/v1/object/sign/fisqs/'+revision.object_path.split('/').map(encodeURIComponent).join('/'),{method:'POST',body:JSON.stringify({expiresIn:300})});
+      const result=await raw('/storage/v1/object/sign/fisqs/'+revision.object_path.split('/').map(encodeURIComponent).join('/'),{method:'POST',body:JSON.stringify({expiresIn:300})},null);
       if(generation!==signing||!$('viewer').open)return;
       const rawSigned=result.signedURL;
       if(typeof rawSigned!=='string')throw new Error('Não foi possível abrir este documento.');
@@ -152,7 +152,7 @@
       $('editor').close();if($('detail').open)$('detail').close();await load();message('status','Documento salvo. As versões anteriores foram preservadas.');
     }catch(e){message('upload-status',e.message,true);}finally{saving=false;$('save').disabled=false;$('close-editor').disabled=false;}
   }
-  function lock(){++authGeneration;session=null;role=null;products=[];revisions=[];$('results').replaceChildren();$('catalog').hidden=true;$('login-panel').hidden=false;$('logout').hidden=true;$('add').hidden=true;for(const id of ['editor','viewer','detail'])if($(id).open)$(id).close();$('upload-form').reset();$('detail-body').replaceChildren();$('viewer-links').replaceChildren();$('pdf-frame').removeAttribute('src');}
+  function lock(){++authGeneration;session=null;role=null;$('login-panel').close();$('logout').hidden=true;$('add').hidden=false;for(const id of ['editor','viewer','detail'])if($(id).open)$(id).close();$('upload-form').reset();$('detail-body').replaceChildren();$('viewer-links').replaceChildren();$('pdf-frame').removeAttribute('src');}
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.submitter;button.disabled=true;message('status','Entrando…');
     try{
@@ -162,14 +162,15 @@
       session={...data,expires_at:Date.now()/1000+data.expires_in};
       const access=await request('/rest/v1/rpc/fisqs_pin_login',{method:'POST',body:JSON.stringify({p_employee_name:employee,p_pin:pin})});
       role=access[0]?.role;if(!role)throw new Error('Não foi possível confirmar seu acesso.');
-      $('login-panel').hidden=true;$('catalog').hidden=false;$('logout').hidden=false;$('add').hidden=!canWrite();await load();
+      $('login-panel').close();$('logout').hidden=false;$('add').hidden=false;await load();editor();
     }catch(e){if(session)await raw('/auth/v1/logout?scope=local',{method:'POST'}).catch(()=>{});lock();message('status',e.message,true);}finally{$('pin').value='';button.disabled=false;}
   });
-  $('logout').addEventListener('click',async()=>{if(saving)return;try{await request('/auth/v1/logout?scope=local',{method:'POST'});}catch{}finally{lock();message('status','Você saiu do módulo FISPQ.');}});
-  $('search').addEventListener('input',render);$('category').addEventListener('change',render);$('retry').addEventListener('click',load);$('add').addEventListener('click',()=>editor());$('product-choice').addEventListener('change',toggleProductFields);$('upload-form').addEventListener('submit',save);
+  $('logout').addEventListener('click',async()=>{if(saving)return;try{await request('/auth/v1/logout?scope=local',{method:'POST'});}catch{}finally{lock();message('status','Você saiu do modo supervisor.');}});
+  $('search').addEventListener('input',render);$('category').addEventListener('change',render);$('retry').addEventListener('click',load);$('add').addEventListener('click',()=>{if(canWrite())editor();else{$('login-form').reset();message('status','');$('login-panel').showModal();}});$('product-choice').addEventListener('change',toggleProductFields);$('upload-form').addEventListener('submit',save);
   $('editor').addEventListener('cancel',e=>{if(saving)e.preventDefault();});
   $('viewer').addEventListener('close',()=>{++signing;$('pdf-frame').removeAttribute('src');});
   document.addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;if(button.dataset.close)$(button.dataset.close).close();if(button.dataset.product)showDetails(button.dataset.product);if(button.dataset.open)view(button.dataset.open);if(button.dataset.update)editor(button.dataset.update,button.dataset.kind||'safety');});
   loadEmployees().catch(()=>message('status','Não foi possível carregar a lista de funcionários.',true));
+  load();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();

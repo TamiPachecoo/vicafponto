@@ -8,16 +8,16 @@
 <script src="fisqs.js" defer></script>
 </head>
 <body>
-<header><a href="menu.html" class="brand">Vicaf Hydro <span>Documentos de produtos químicos</span></a><button id="logout" hidden>Sair</button></header>
+<header><a href="menu.html" class="brand">Vicaf Hydro <span>Documentos de produtos químicos</span></a><button id="logout" hidden>Sair do modo supervisor</button></header>
 <main>
 <div class="heading"><div><p class="eyebrow">CONSULTA EM CAMPO</p><h1>FISPQ</h1></div><button id="add" class="primary" hidden>+ Adicionar FISPQ</button></div>
-<section id="login-panel" class="panel">
+<dialog id="login-panel"><section class="panel">
 <h2>Acessar documentos</h2><p>Selecione seu nome e digite o mesmo PIN de quatro dígitos usado no Ponto. Supervisores podem adicionar novas fichas e revisões.</p>
 <form id="login-form"><label>Seu nome<select id="employee" required><option value="">Selecione seu nome</option></select></label><label>PIN de 4 dígitos<input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="primary" type="submit">Entrar</button></form>
 <p class="muted">O acesso é encerrado ao sair deste módulo.</p>
-</section>
+</section></dialog>
 <p id="status" role="status" aria-live="polite"></p>
-<section id="catalog" hidden>
+<section id="catalog">
 <div class="filters"><label class="search">Buscar produto, fabricante ou código<input id="search" type="search" placeholder="Ex.: LOCTITE 271, óleo, diluente…"></label><label>Categoria<select id="category"><option value="">Todas as categorias</option></select></label></div>
 <p id="count" class="muted"></p><div id="results" class="results"></div><button id="retry" hidden>Tentar novamente</button>
 </section>
